@@ -1,0 +1,159 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | cfMesh: A library for mesh generation          | 
+|  \\    /   O peration     |                                                 |
+|   \\  /    A nd           | Author: Franjo Juretic                          | 
+|    \\/     M anipulation  | E-mail: franjo.juretic@c-fields.com            |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version   2.0;
+    format    ascii;
+    class     dictionary;
+    location  "system";
+    object    meshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+surfaceFile "geometry.stl";
+
+maxCellSize 2.083333;
+
+// Enforce boundary layers on all surfaces for HVAC thermal analysis
+// This is critical for accurate near-wall temperature and velocity profiles
+boundaryCellSize 2.083333;
+
+// Minimum cell size allowed (prevents over-refinement)
+minCellSize 0.005;
+
+// Local refinement near surfaces based on boundary condition type
+// Pressure boundaries (windows, doors, vents) get finer mesh for better flow resolution
+localRefinement
+{
+    wall_0F_1
+    {
+        cellSize 1.388889;
+    }
+    door_0F_1
+    {
+        cellSize 1.041667;
+    }
+    wall_0F_4
+    {
+        cellSize 1.388889;
+    }
+    wall_0F_5
+    {
+        cellSize 1.388889;
+    }
+    wall_0F_6
+    {
+        cellSize 1.388889;
+    }
+    window_0F_1
+    {
+        cellSize 1.041667;
+    }
+    floor_0F
+    {
+        cellSize 1.388889;
+    }
+    ceil_0F
+    {
+        cellSize 1.388889;
+    }
+}
+
+// Boundary layer configuration
+// cfMesh automatically generates robust boundary layers (>90% coverage)
+// This is superior to snappyHexMesh for HVAC applications
+boundaryLayers
+{
+    // Number of layers and thickness control
+    patchBoundaryLayers
+    {
+    wall_0F_1
+    {
+        nLayers 6;
+        thicknessRatio 1.1;
+        maxFirstLayerThickness 0.208333;
+    }
+    door_0F_1
+    {
+        nLayers 8;
+        thicknessRatio 1.1;
+        maxFirstLayerThickness 0.208333;
+    }
+    wall_0F_4
+    {
+        nLayers 6;
+        thicknessRatio 1.1;
+        maxFirstLayerThickness 0.208333;
+    }
+    wall_0F_5
+    {
+        nLayers 6;
+        thicknessRatio 1.1;
+        maxFirstLayerThickness 0.208333;
+    }
+    wall_0F_6
+    {
+        nLayers 6;
+        thicknessRatio 1.1;
+        maxFirstLayerThickness 0.208333;
+    }
+    window_0F_1
+    {
+        nLayers 8;
+        thicknessRatio 1.1;
+        maxFirstLayerThickness 0.208333;
+    }
+    floor_0F
+    {
+        nLayers 6;
+        thicknessRatio 1.1;
+        maxFirstLayerThickness 0.208333;
+    }
+    ceil_0F
+    {
+        nLayers 6;
+        thicknessRatio 1.1;
+        maxFirstLayerThickness 0.208333;
+    }
+    }
+    
+    // Optimization settings for layer quality
+    optimiseLayer 1;
+    
+    // Allow untangling of boundary layer for difficult geometries
+    untangleLayers 1;
+}
+
+// Reproject surface points for better geometry capture
+renameBoundary
+{
+    defaultName        walls;
+    defaultType        wall;
+}
+
+// Quality settings for mesh optimization
+meshQualitySettings
+{
+    // Maximum non-orthogonality angle (degrees)
+    // Lower is better, 65 is acceptable for CFD
+    maxNonOrthogonality 65;
+    
+    // Maximum boundary skewness
+    maxBoundarySkewness 20;
+    
+    // Maximum internal skewness
+    maxInternalSkewness 4;
+    
+    // Minimum cell volume (cubic meters)
+    minCellVolume 1e-13;
+    
+    // Minimum face area
+    minFaceArea 1e-13;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

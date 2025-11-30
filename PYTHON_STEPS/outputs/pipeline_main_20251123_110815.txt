@@ -1,0 +1,81 @@
+
+======================================================================
+STEP 01: JSON → GEOMETRÍA 3D (step01_json2geo.py)
+======================================================================
+
+📂 Cargando JSON: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/MySim_FlowDeskModel.json
+📋 Case name: MySim
+
+🔄 Ejecutando STEP 01...
+
+----------------------------------------------------------------------
+✅ VALIDACIÓN DE OUTPUT - STEP 01
+----------------------------------------------------------------------
+
+📐 Geometría (pv.PolyData):
+   - Tipo: PolyData
+   - Vértices: 16
+   - Celdas: 28
+   - Válida: ✓
+
+📊 Condiciones de Frontera (DataFrame):
+   - Tipo: DataFrame
+   - Filas: 8
+   - Columnas: ['id', 'type', 'T', 'open', 'pressure', 'U', 'nx', 'ny', 'nz']
+   - Válido: ✓
+
+----------------------------------------------------------------------
+💾 GUARDANDO OUTPUTS DE STEP 01 EN DISCO
+----------------------------------------------------------------------
+✓ Geometría guardada: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_01_20251123_110815/geometry_20251123_110815.vtk
+✓ Condiciones de frontera guardadas: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_01_20251123_110815/boundary_conditions_20251123_110815.csv
+✓ Condiciones de frontera (JSON) guardadas: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_01_20251123_110815/boundary_conditions_20251123_110815.json
+✓ Resumen guardado: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_01_20251123_110815/summary_20251123_110815.json
+
+======================================================================
+✅ STEP 01 COMPLETADO EXITOSAMENTE
+======================================================================
+📁 Outputs guardados en: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_01_20251123_110815
+
+
+======================================================================
+STEP 02: GEOMETRÍA → COMANDOS DE MALLADO (step02_geo2mesh.py)
+======================================================================
+
+🔄 Ejecutando STEP 02...
+
+----------------------------------------------------------------------
+✅ VALIDACIÓN DE OUTPUT - STEP 02
+----------------------------------------------------------------------
+
+📜 Script de Mallado:
+   - Tipo: list
+   - Número de comandos: 83
+   - Válido: ✓
+
+----------------------------------------------------------------------
+💾 GUARDANDO OUTPUTS DE STEP 02 EN DISCO
+----------------------------------------------------------------------
+✓ Script de mallado guardado: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_02_20251123_110815/mesh_script_20251123_110815.sh
+✓ Resumen guardado: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_02_20251123_110815/summary_20251123_110815.json
+✓ Preview de comandos guardado: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_02_20251123_110815/commands_preview_20251123_110815.txt
+
+======================================================================
+✅ STEP 02 COMPLETADO EXITOSAMENTE
+======================================================================
+📁 Outputs guardados en: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_02_20251123_110815
+
+⚠️  NOTA: Los comandos de mallado están preparados pero NO ejecutados
+    Para ejecutar la malla, ejecuta el script generado en OpenFOAM
+
+
+======================================================================
+⏭️  STEP 03 SKIPPED (mesh-only mode)
+======================================================================
+
+Malla generada exitosamente.
+Para visualizar en ParaView:
+  1. Abre: cases/MySim/sim/results.foam
+  2. O abre: cases/MySim/sim/constant/polyMesh/
+
+

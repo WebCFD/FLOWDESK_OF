@@ -1,0 +1,65 @@
+
+======================================================================
+STEP 01: JSON → GEOMETRÍA 3D (step01_json2geo.py)
+======================================================================
+
+📂 Cargando JSON: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/MySim_FlowDeskModel.json
+📋 Case name: MySim
+
+🔄 Ejecutando STEP 01...
+
+----------------------------------------------------------------------
+✅ VALIDACIÓN DE OUTPUT - STEP 01
+----------------------------------------------------------------------
+
+📐 Geometría (pv.PolyData):
+   - Tipo: PolyData
+   - Vértices: 20
+   - Celdas: 36
+   - Válida: ✓
+
+📊 Condiciones de Frontera (DataFrame):
+   - Tipo: DataFrame
+   - Filas: 10
+   - Columnas: ['id', 'type', 'T', 'open', 'pressure', 'U', 'nx', 'ny', 'nz']
+   - Válido: ✓
+
+----------------------------------------------------------------------
+💾 GUARDANDO OUTPUTS DE STEP 01 EN DISCO
+----------------------------------------------------------------------
+✓ Geometría guardada (VTK): /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_01_20251123_155926/geometry_20251123_155926.vtk
+✓ Geometría guardada (STL): /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_01_20251123_155926/geometry_20251123_155926.stl
+✓ Geometría copiada a: /home/plprm/FLOWDESK_OF/cases/MySim/geo/geometry.stl
+✓ Condiciones de frontera guardadas: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_01_20251123_155926/boundary_conditions_20251123_155926.csv
+✓ Condiciones de frontera (JSON) guardadas: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_01_20251123_155926/boundary_conditions_20251123_155926.json
+✓ Resumen guardado: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_01_20251123_155926/summary_20251123_155926.json
+
+======================================================================
+✅ STEP 01 COMPLETADO EXITOSAMENTE
+======================================================================
+📁 Outputs guardados en: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_01_20251123_155926
+
+
+======================================================================
+STEP 02: GEOMETRÍA → COMANDOS DE MALLADO (step02_geo2mesh.py)
+======================================================================
+
+🔄 Ejecutando STEP 02...
+
+----------------------------------------------------------------------
+✅ VALIDACIÓN DE OUTPUT - STEP 02
+----------------------------------------------------------------------
+
+📜 Script de Mallado:
+   - Tipo: NoneType
+
+======================================================================
+❌ ERROR EN STEP 02: object of type 'NoneType' has no len()
+======================================================================
+
+Traceback (most recent call last):
+  File "/home/plprm/FLOWDESK_OF/PYTHON_STEPS/mainPipeline.py", line 297, in main
+    log_print(f"   - Número de comandos: {len(mesh_script_commands)}")
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object of type 'NoneType' has no len()
+

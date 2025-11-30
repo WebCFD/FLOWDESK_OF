@@ -1,0 +1,37 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | cfMesh: A library for mesh generation          |
+|  \\    /   O peration     |                                                 |
+|   \\  /    A nd           | Author: Franjo Juretic                          |
+|    \\/     M anipulation  | E-mail: franjo.juretic@c-fields.com            |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version   2.0;
+    format    ascii;
+    class     edgeMesh;
+    location  "constant/triSurface";
+    object    geometry.eMesh;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Patch definitions for cfMesh
+// This file helps cfMesh identify and map patches from the STL surface
+
+// Patch 0: wall_0F_1
+// Faces: 6
+// Patch 1: door_0F_1
+// Faces: 2
+// Patch 2: wall_0F_4
+// Faces: 2
+// Patch 3: wall_0F_5
+// Faces: 2
+// Patch 4: wall_0F_6
+// Faces: 8
+// Patch 5: window_0F_1
+// Faces: 2
+// Patch 6: floor_0F
+// Faces: 4
+// Patch 7: ceil_0F
+// Faces: 2
+

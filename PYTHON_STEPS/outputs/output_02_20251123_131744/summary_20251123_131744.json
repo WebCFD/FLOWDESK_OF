@@ -1,0 +1,13 @@
+{
+  "timestamp": "20251123_131744",
+  "step": "STEP 02",
+  "case_name": "MySim",
+  "mesh_script": {
+    "type": "list",
+    "num_commands": 83,
+    "mesher_type": "cfmesh"
+  },
+  "output_files": {
+    "mesh_script": "/home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_02_20251123_131744/mesh_script_20251123_131744.sh"
+  }
+}

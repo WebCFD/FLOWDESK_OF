@@ -1,0 +1,13 @@
+
+============================================================
+EJECUTANDO MAIN PIPELINE - step01_json2geo
+============================================================
+
+📂 Cargando JSON: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/MySim_FlowDeskModel.json
+📋 Case name: MySim
+
+🔄 Ejecutando pipeline...
+
+------------------------------------------------------------
+
+============================================================

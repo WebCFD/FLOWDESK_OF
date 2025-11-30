@@ -1,0 +1,62 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Background mesh for snappyHexMesh
+// Margin added to ensure geometry fully enclosed
+
+vertices
+(
+    ($XMIN $YMIN $ZMIN)
+    ($XMAX $YMIN $ZMIN)
+    ($XMAX $YMAX $ZMIN)
+    ($XMIN $YMAX $ZMIN)
+    ($XMIN $YMIN $ZMAX)
+    ($XMAX $YMIN $ZMAX)
+    ($XMAX $YMAX $ZMAX)
+    ($XMIN $YMAX $ZMAX)
+);
+
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) (20 20 10) simpleGrading (1 1 1)
+);
+
+edges
+(
+);
+
+boundary
+(
+    limits
+    {
+        type patch;
+        faces
+        (
+            (0 4 7 3)
+            (2 6 5 1)
+            (0 3 2 1)
+            (4 5 6 7)
+            (0 1 5 4)
+            (3 7 6 2)
+        );
+    }
+);
+
+mergePatchPairs
+(
+);
+
+// ************************************************************************* //

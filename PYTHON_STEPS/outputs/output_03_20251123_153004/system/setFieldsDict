@@ -1,0 +1,125 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      setFieldsDict;
+}
+
+// Establish hydrostatic pressure distribution: p(z) = p_atm - rho * g * z
+// This provides a physically consistent initial condition for buoyantSimpleFoam
+//
+// Constants:
+//   p_atm = 101325 Pa (atmospheric pressure at ground level)
+//   rho_ref = 1.2 kg/m³ (air density at 20°C)
+//   g = 9.81 m/s²
+//
+// Pressure gradient: dp/dz = -11.772 Pa/m
+
+defaultFieldValues
+(
+    volScalarFieldValue p 101325
+);
+
+regions
+(
+    // Layer 0.0-0.5m: p = 101325 - 1.2*9.81*0.25 = 101322.1 Pa
+    boxToCell
+    {
+        box (-1000 -1000 0.0) (1000 1000 0.5);
+        fieldValues
+        (
+            volScalarFieldValue p 101322.1
+        );
+    }
+
+    // Layer 0.5-1.0m: p = 101325 - 1.2*9.81*0.75 = 101316.2 Pa
+    boxToCell
+    {
+        box (-1000 -1000 0.5) (1000 1000 1.0);
+        fieldValues
+        (
+            volScalarFieldValue p 101316.2
+        );
+    }
+
+    // Layer 1.0-1.5m: p = 101325 - 1.2*9.81*1.25 = 101310.2 Pa
+    boxToCell
+    {
+        box (-1000 -1000 1.0) (1000 1000 1.5);
+        fieldValues
+        (
+            volScalarFieldValue p 101310.2
+        );
+    }
+
+    // Layer 1.5-2.0m: p = 101325 - 1.2*9.81*1.75 = 101304.3 Pa
+    boxToCell
+    {
+        box (-1000 -1000 1.5) (1000 1000 2.0);
+        fieldValues
+        (
+            volScalarFieldValue p 101304.3
+        );
+    }
+
+    // Layer 2.0-2.5m: p = 101325 - 1.2*9.81*2.25 = 101298.4 Pa
+    boxToCell
+    {
+        box (-1000 -1000 2.0) (1000 1000 2.5);
+        fieldValues
+        (
+            volScalarFieldValue p 101298.4
+        );
+    }
+
+    // Layer 2.5-3.0m: p = 101325 - 1.2*9.81*2.75 = 101292.6 Pa
+    boxToCell
+    {
+        box (-1000 -1000 2.5) (1000 1000 3.0);
+        fieldValues
+        (
+            volScalarFieldValue p 101292.6
+        );
+    }
+
+    // Layer 3.0-3.5m: p = 101325 - 1.2*9.81*3.25 = 101286.7 Pa
+    boxToCell
+    {
+        box (-1000 -1000 3.0) (1000 1000 3.5);
+        fieldValues
+        (
+            volScalarFieldValue p 101286.7
+        );
+    }
+
+    // Layer 3.5-4.0m: p = 101325 - 1.2*9.81*3.75 = 101280.8 Pa
+    boxToCell
+    {
+        box (-1000 -1000 3.5) (1000 1000 4.0);
+        fieldValues
+        (
+            volScalarFieldValue p 101280.8
+        );
+    }
+
+    // Layer 4.0-5.0m: p = 101325 - 1.2*9.81*4.5 = 101271.9 Pa
+    boxToCell
+    {
+        box (-1000 -1000 4.0) (1000 1000 5.0);
+        fieldValues
+        (
+            volScalarFieldValue p 101271.9
+        );
+    }
+
+    // Layer 5.0-10.0m: p = 101325 - 1.2*9.81*7.5 = 101236.4 Pa
+    boxToCell
+    {
+        box (-1000 -1000 5.0) (1000 1000 10.0);
+        fieldValues
+        (
+            volScalarFieldValue p 101236.4
+        );
+    }
+);

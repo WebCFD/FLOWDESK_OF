@@ -1,0 +1,42 @@
+
+======================================================================
+STEP 01: JSON → GEOMETRÍA 3D (step01_json2geo.py)
+======================================================================
+
+📂 Cargando JSON: /home/plprm/FLOWDESK_OF/PYTHON_STEPS/MySim_FlowDeskModel.json
+📋 Case name: MySim
+
+🔄 Ejecutando STEP 01...
+
+----------------------------------------------------------------------
+✅ VALIDACIÓN DE OUTPUT - STEP 01
+----------------------------------------------------------------------
+
+📐 Geometría (pv.PolyData):
+   - Tipo: PolyData
+   - Vértices: 16
+   - Celdas: 28
+   - Válida: ✓
+
+📊 Condiciones de Frontera (DataFrame):
+   - Tipo: DataFrame
+   - Filas: 8
+   - Columnas: ['id', 'type', 'T', 'open', 'pressure', 'U', 'nx', 'ny', 'nz']
+   - Válido: ✓
+
+----------------------------------------------------------------------
+💾 GUARDANDO OUTPUTS DE STEP 01 EN DISCO
+----------------------------------------------------------------------
+✓ Geometría guardada (VTK): /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_01_20251123_131430/geometry_20251123_131430.vtk
+✓ Geometría guardada (STL): /home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_01_20251123_131430/geometry_20251123_131430.stl
+
+======================================================================
+❌ ERROR EN STEP 01: cannot access local variable 'case_path' where it is not associated with a value
+======================================================================
+
+Traceback (most recent call last):
+  File "/home/plprm/FLOWDESK_OF/PYTHON_STEPS/mainPipeline.py", line 207, in main
+    geo_dir = os.path.join(case_path, "geo")
+                           ^^^^^^^^^
+UnboundLocalError: cannot access local variable 'case_path' where it is not associated with a value
+

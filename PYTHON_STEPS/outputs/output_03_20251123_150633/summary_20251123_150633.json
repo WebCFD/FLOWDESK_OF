@@ -1,0 +1,19 @@
+{
+  "timestamp": "20251123_150633",
+  "step": "STEP 03",
+  "case_name": "MySim",
+  "cfd_configuration": {
+    "simulation_type": "hvac",
+    "iteration_type": "comfortTest",
+    "case_path": "/home/plprm/FLOWDESK_OF/cases/MySim",
+    "sim_path": "/home/plprm/FLOWDESK_OF/cases/MySim/sim"
+  },
+  "directories_created": {
+    "system": 6,
+    "constant": 4,
+    "0.orig": 5
+  },
+  "output_files": {
+    "configuration_backup": "/home/plprm/FLOWDESK_OF/PYTHON_STEPS/outputs/output_03_20251123_150633"
+  }
+}
