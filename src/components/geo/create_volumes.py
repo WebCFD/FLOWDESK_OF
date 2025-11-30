@@ -362,10 +362,19 @@ def from_3d_to_wall2d(points_3d, p_origin, udir, vdir):
 
 
 def from_wall2d_to_3d(points_2d, p_origin, udir, vdir):
+    # DEBUG: Log para entender el problema
+    logger.info(f"    [DEBUG] from_wall2d_to_3d:")
+    logger.info(f"      - Input shape: {points_2d.shape}")
+    logger.info(f"      - Input dtype: {points_2d.dtype}")
+    if len(points_2d) > 0:
+        logger.info(f"      - First point: {points_2d[0]}")
+    
     if points_2d.ndim == 1:
         points_2d = points_2d[np.newaxis, :]
 
     if points_2d.shape[1] != 2:
+        logger.error(f"      ❌ ERROR: Expected 2 columns but got {points_2d.shape[1]}")
+        logger.error(f"      - Full shape: {points_2d.shape}")
         raise ValueError("Each point in 'points_2d' must be a 2D point")
 
     return p_origin + np.outer(points_2d[:, 0], udir) + np.outer(points_2d[:, 1], vdir)
@@ -448,8 +457,18 @@ def create_bound_surface(str_type: str, patch_df: pd.DataFrame, polygon: pv.Poly
     patch_df, entries_dict = create_entries(patch_df, data['airEntries'], 0, p0, udir, vdir)
 
     wall_meshes = []
+    
+    # CORRECT FIX: Usar unary_union para combinar todas las ventanas/puertas
+    # Esto evita auto-intersecciones que ocurren con múltiples diferencias sucesivas
+    if entries_dict:
+        # Combinar todos los polígonos de ventanas/puertas en uno solo
+        all_entries_union = shapely.unary_union(list(entries_dict.values()))
+        
+        # Hacer UNA sola operación de diferencia
+        floor_polygon = floor_polygon.difference(all_entries_union)
+    
+    # Crear meshes para cada ventana/puerta
     for entry_id, entry_polygon in entries_dict.items():
-        floor_polygon = floor_polygon.difference(entry_polygon)
         entry_mesh = create_mesh_from_polygon(patch_df, entry_id, entry_polygon, p0, udir, vdir)
         wall_meshes.append(entry_mesh)
 
@@ -481,7 +500,25 @@ def create_mesh_from_polygon(patch_df, entry_id, entry_polygon, p0, udir, vdir):
     point_index = {}
     next_index = 0
 
+    # ROBUST FIX 1: Validar y reparar polígono inválido
+    if not entry_polygon.is_valid:
+        print(f"[WARNING] Polígono {entry_id} inválido. Reparando con make_valid()...")
+        entry_polygon = shapely.make_valid(entry_polygon)
+    
+    # ROBUST FIX 2: Manejar polígonos vacíos o con área negligible
+    if entry_polygon.is_empty or entry_polygon.area < 1e-10:
+        print(f"[WARNING] Polígono {entry_id} vacío o con área negligible. Creando mesh vacío.")
+        # Retornar mesh vacío
+        points_2d = np.array([]).reshape(0, 2)
+        faces = np.array([], dtype=int)
+        points_3d = from_wall2d_to_3d(points_2d, p0, udir, vdir)
+        mesh = pv.PolyData(points_3d, faces)
+        patch_idx = patch_df.index[patch_df['id'] == entry_id][0].astype(np.int16)
+        mesh.cell_data['patch_id'] = []
+        return mesh
+    
     triangles  = shapely.constrained_delaunay_triangles(entry_polygon)
+    
     for triangle in triangles.geoms:
         coords = list(triangle.exterior.coords)[:-1]  # omit duplicate closing point
         face = [3]  # number of points in the triangle
@@ -502,7 +539,7 @@ def create_mesh_from_polygon(patch_df, entry_id, entry_polygon, p0, udir, vdir):
     mesh = pv.PolyData(points_3d, faces)
     patch_idx = patch_df.index[patch_df['id'] == entry_id][0].astype(np.int16)
     mesh.cell_data['patch_id'] = [patch_idx] * mesh.n_cells
-    return mesh 
+    return mesh
 
 
 def create_floor_mesh(patch_df: pd.DataFrame, level_name: str, level_data: Dict[str, Any], base_height: float = 0) -> Tuple[pd.DataFrame, pv.PolyData]:
