@@ -115,7 +115,7 @@ def main():
     
     # Importar step03 solo si es necesario (no en stl-only)
     # Esto evita cargar foamlib y otras dependencias innecesarias
-    global EXECUTION_MODE
+    global EXECUTION_MODE, json_filename
     if EXECUTION_MODE != "stl-only":
         from step03_mesh2cfd import run as step03_run
     
@@ -152,10 +152,12 @@ def main():
     log_print("="*70 + "\n")
     
     # Cargar el JSON de entrada
-    json_path = os.path.join(os.path.dirname(__file__), "MySim_FlowDeskModel.json")
+    json_path = os.path.join(os.path.dirname(__file__), json_filename)
     
     if not os.path.exists(json_path):
         log_print(f"❌ Error: No se encontró el archivo JSON en {json_path}")
+        log_print(f"   Archivo buscado: {json_filename}")
+        log_print(f"   Ruta completa: {json_path}")
         return False
     
     log_print(f"📂 Cargando JSON: {json_path}")
@@ -564,10 +566,19 @@ if __name__ == "__main__":
         default="full",
         help="Modo de ejecución: stl-only (solo STL), mesh-only (cfMesh sin CFD), full (cfMesh + CFD)"
     )
+    parser.add_argument(
+        "--json",
+        type=str,
+        default="MySim_FlowDeskModel.json",
+        help="Archivo JSON de entrada (ruta relativa a PYTHON_STEPS/). Por defecto: MySim_FlowDeskModel.json"
+    )
     args = parser.parse_args()
     
     # Establecer modo de ejecución global
     EXECUTION_MODE = args.mode
+    
+    # Establecer archivo JSON de entrada
+    json_filename = args.json
     
     # Cargar OpenFOAM solo si vamos a ejecutar cfMesh o CFD (no en stl-only)
     if EXECUTION_MODE != "stl-only":
@@ -588,6 +599,8 @@ if __name__ == "__main__":
     else:
         print("└─ Ejecutará cfMesh + simulación CFD completa")
         print("└─ OpenFOAM environment: REQUIRED")
+    print("="*70)
+    print(f"INPUT JSON: {json_filename}")
     print("="*70 + "\n")
     
     success = main()

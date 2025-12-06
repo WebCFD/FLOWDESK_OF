@@ -10,6 +10,7 @@ from src.components.geo.create_volumes import create_volumes
 from src.components.geo.boolean_operations import perform_boolean_operations
 from src.components.geo.finalise_geometry import finalise_geometry
 from src.components.geo.export_result import export_geo
+from src.components.geo.geometry_validator import log_validation
 from pipeline_exceptions import GeometryStepError
 
 logger = logging.getLogger(__name__)
@@ -63,6 +64,34 @@ def run(json_payload: Dict[str, Any], case_name: str) -> Tuple[pv.PolyData, pd.D
                 'suggestion': 'Ensure the JSON contains valid room definitions with closed polygons'
             }
         )
+    
+    # Step 2.5: Validate geometry (basic checks)
+    logger.info("2.5 - Validating geometry")
+    logger.info("-" * 70)
+    
+    # Validar que cada room tiene puntos y celdas
+    for i, room_mesh in enumerate(room_geometry_meshes):
+        room_id = f"room_{i}"
+        n_points = room_mesh.n_points
+        n_cells = room_mesh.n_cells
+        
+        if n_points > 0 and n_cells > 0:
+            logger.info(f"✓ {room_id}: {n_points} points, {n_cells} cells")
+        else:
+            logger.warning(f"⚠️  {room_id}: Invalid geometry (points={n_points}, cells={n_cells})")
+    
+    # Validar que cada furniture tiene puntos y celdas
+    for i, furniture_mesh in enumerate(furniture_meshes):
+        furniture_id = f"furniture_{i}"
+        n_points = furniture_mesh.n_points
+        n_cells = furniture_mesh.n_cells
+        
+        if n_points > 0 and n_cells > 0:
+            logger.info(f"✓ {furniture_id}: {n_points} points, {n_cells} cells")
+        else:
+            logger.warning(f"⚠️  {furniture_id}: Invalid geometry (points={n_points}, cells={n_cells})")
+    
+    logger.info("-" * 70)
 
     # Step 3: Combine room geometry and subtract furniture using boolean operations
     logger.info("3 - Combining room geometry and applying furniture subtractions")
