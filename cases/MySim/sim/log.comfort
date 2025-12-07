@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "./calculate_comfort.py", line 16, in <module>
-    from foamlib import FoamCase
-ModuleNotFoundError: No module named 'foamlib'

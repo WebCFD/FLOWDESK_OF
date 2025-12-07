@@ -480,18 +480,95 @@ def create_bound_surface(str_type: str, patch_df: pd.DataFrame, polygon: pv.Poly
     return patch_df, result_mesh
 
 
-def create_polygon_from_mesh(mesh):
-    edges = mesh.cells.reshape(-1,3)[:,1:]
-    u, v = edges.T
-    adj = np.empty(u.shape, dtype=u.dtype)
-    adj[u] = v
-
-    v = edges[0,0]
-    vert_idxs = [v]
-    for _ in range(len(edges)):
-        v = adj[v]
-        vert_idxs.append(v)
-    return shapely.force_2d(shapely.Polygon(mesh.points[vert_idxs]))
+def create_polygon_from_mesh(mesh, target_z=None):
+    """
+    Extract a 2D polygon from a mesh boundary, filtering by Z coordinate.
+    
+    ROBUST FIX: Filtra puntos por su coordenada Z para evitar duplicados
+    cuando el mesh contiene puntos de múltiples alturas (ej: floor y ceiling
+    de las paredes que van de Z=0 a Z=height).
+    
+    Args:
+        mesh: PyVista PolyData mesh
+        target_z: Altura Z objetivo para filtrar puntos. Si es None, usa la mediana.
+    
+    Returns:
+        Polígono 2D válido
+    """
+    # Detectar el Z objetivo si no se proporciona
+    if target_z is None:
+        z_values = mesh.points[:, 2]
+        target_z = np.median(z_values)
+        logger.info(f"    [DEBUG] target_z detectado: {target_z:.4f}")
+    
+    # Filtrar puntos con el Z objetivo (tolerancia pequeña)
+    tolerance = 0.01
+    mask = np.abs(mesh.points[:, 2] - target_z) < tolerance
+    filtered_points = mesh.points[mask]
+    
+    logger.info(f"    [DEBUG] Puntos totales: {len(mesh.points)}, Puntos filtrados (Z≈{target_z:.4f}): {len(filtered_points)}")
+    
+    if len(filtered_points) < 3:
+        logger.error(f"Insuficientes puntos después de filtrar por Z. Retornando polígono vacío.")
+        return shapely.Polygon()
+    
+    try:
+        # Extraer edges del mesh original pero usar solo los puntos filtrados
+        edges = mesh.cells.reshape(-1,3)[:,1:]
+        u, v = edges.T
+        
+        # Mapear índices originales a índices filtrados
+        original_to_filtered = {}
+        filtered_idx = 0
+        for orig_idx in range(len(mesh.points)):
+            if mask[orig_idx]:
+                original_to_filtered[orig_idx] = filtered_idx
+                filtered_idx += 1
+        
+        # Filtrar edges para que solo contengan puntos filtrados
+        valid_edges = []
+        for edge_u, edge_v in zip(u, v):
+            if edge_u in original_to_filtered and edge_v in original_to_filtered:
+                valid_edges.append((original_to_filtered[edge_u], original_to_filtered[edge_v]))
+        
+        if len(valid_edges) < 3:
+            logger.warning(f"Insuficientes edges válidos. Usando convex_hull...")
+            raise ValueError("Insuficientes edges")
+        
+        # Construir polígono desde edges filtrados
+        adj = {}
+        for u_idx, v_idx in valid_edges:
+            adj[u_idx] = v_idx
+        
+        v = valid_edges[0][0]
+        vert_idxs = [v]
+        for _ in range(len(valid_edges)):
+            v = adj[v]
+            vert_idxs.append(v)
+        
+        polygon = shapely.force_2d(shapely.Polygon(filtered_points[vert_idxs]))
+        
+        # Validar que el polígono extraído es válido y tiene área significativa
+        if polygon.is_valid and polygon.area > 1e-10:
+            logger.info(f"    [DEBUG] Polígono extraído exitosamente: área={polygon.area:.6f}")
+            return polygon
+        else:
+            logger.warning(f"Polígono extraído inválido o con área negligible ({polygon.area:.6f}). Usando convex_hull...")
+            raise ValueError("Polígono inválido")
+    
+    except Exception as e:
+        # Fallback: usar convex_hull de los puntos filtrados 2D
+        logger.warning(f"Error extrayendo polígono: {e}. Usando convex_hull como fallback...")
+        points_2d = filtered_points[:, :2]
+        multipoint = shapely.MultiPoint(points_2d)
+        polygon = shapely.convex_hull(multipoint)
+        
+        if polygon.is_valid and polygon.area > 1e-10:
+            logger.info(f"    [DEBUG] Convex_hull exitoso: área={polygon.area:.6f}")
+            return polygon
+        else:
+            logger.error(f"Convex_hull también falló. Retornando polígono vacío.")
+            return shapely.Polygon()
 
 
 def create_mesh_from_polygon(patch_df, entry_id, entry_polygon, p0, udir, vdir):
@@ -637,7 +714,7 @@ def create_stair_mesh(patch_df: pd.DataFrame, data: Dict[str, Any], current_base
     return patch_df, stair_mesh
 
 
-def create_volumes(building_config_data: Dict[str, Any]) -> Tuple[List[pv.PolyData], List[pv.PolyData], pd.DataFrame]:
+def create_volumes(building_config_data: Dict[str, Any], valid_floors: List[str] = None) -> Tuple[List[pv.PolyData], List[pv.PolyData], pd.DataFrame]:
     """
     Create 3D room geometry and furniture from building configuration data.
     
@@ -648,12 +725,19 @@ def create_volumes(building_config_data: Dict[str, Any]) -> Tuple[List[pv.PolyDa
     
     Args:
         building_config_data: JSON data containing building floor definitions
+        valid_floors: List of valid floor names to process (from JSON validation).
+                     If None, processes all floors (backward compatibility).
         
     Returns:
         Tuple of (room_geometry_meshes, furniture_meshes, boundary_conditions_df)
     """
     performance_monitor = PerformanceMonitor()
     performance_monitor.start()
+    
+    # If valid_floors not provided, process all floors (backward compatibility)
+    if valid_floors is None:
+        valid_floors = sorted(building_config_data['levels'].keys(), key=lambda x: int(x))
+        logger.info(f"    * No valid_floors provided, processing all {len(valid_floors)} floors")
     
     # Track current floor elevation for proper stacking
     current_floor_elevation = 0.0
@@ -662,30 +746,34 @@ def create_volumes(building_config_data: Dict[str, Any]) -> Tuple[List[pv.PolyDa
     boundary_conditions_df = pd.DataFrame()
     room_geometry_meshes = []
     furniture_meshes = []
+    
+    # Track stair tubes from previous floor for subtraction
+    previous_stair_tubes = []
 
-    total_floors = len(building_config_data['levels'])
-    logger.info(f"    * Processing {total_floors} floor levels")
+    logger.info(f"    * Processing {len(valid_floors)} valid floor levels")
+    logger.info(f"    * Using LAYER-BASED ARCHITECTURE for robust geometry creation\n")
 
-    for floor_name, floor_config in building_config_data["levels"].items():
+    for floor_name in valid_floors:
+        floor_config = building_config_data["levels"][floor_name]
         logger.info(f"    * Creating geometry for floor #{floor_name}")
         performance_monitor.update_memory()
         
         floor_deck_thickness = floor_config["deck"]
         floor_height = floor_config["height"]
         
-        # CREATE ROOM GEOMETRY (walls, floors, ceilings)
-        boundary_conditions_df, room_mesh = create_floor_mesh(
-            boundary_conditions_df, floor_name, floor_config, base_height=current_floor_elevation
+        # CREATE ROOM GEOMETRY using layer-based architecture
+        # This replaces create_floor_mesh() and integrates stair creation
+        from src.components.geo.create_volumes_layered import create_floor_mesh_layered
+        
+        boundary_conditions_df, room_mesh, current_stair_tubes = create_floor_mesh_layered(
+            boundary_conditions_df, floor_name, floor_config, 
+            base_height=current_floor_elevation,
+            previous_stair_tubes=previous_stair_tubes
         )
         room_geometry_meshes.append(room_mesh)
-
-        # CREATE STAIR CONNECTIONS (FDM_iter2.json format - always upward direction)
-        for stair_config in floor_config["stairs"]:
-            boundary_conditions_df, stair_mesh = create_stair_mesh(
-                boundary_conditions_df, stair_config, 
-                current_floor_elevation + floor_height, floor_deck_thickness
-            )
-            room_geometry_meshes.append(stair_mesh)
+        
+        # Save stair tubes for next floor
+        previous_stair_tubes = current_stair_tubes
 
         # ADD FURNITURE OBJECTS
         for furniture_config in floor_config.get("furniture", []):

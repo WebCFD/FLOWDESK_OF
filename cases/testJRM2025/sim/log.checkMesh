@@ -8,10 +8,10 @@
 Build  : _7bdb509494-20201222 OPENFOAM=2012
 Arch   : "LSB;label=32;scalar=64"
 Exec   : checkMesh
-Date   : Nov 30 2025
-Time   : 19:50:56
+Date   : Dec 05 2025
+Time   : 22:07:24
 Host   : plprm-HPEliteDesk
-PID    : 65191
+PID    : 30695
 I/O    : uncollated
 Case   : /home/plprm/FLOWDESK_OF/cases/testJRM2025/sim
 nProcs : 1
@@ -73,8 +73,8 @@ Checking geometry...
     Overall domain bounding box (-4.01104 -1.26598 -0.0194366) (3.63401 4.26091 2.21944)
     Mesh has 3 geometric (non-empty/wedge) directions (1 1 1)
     Mesh has 3 solution (non-empty) directions (1 1 1)
-    Boundary openness (5.70449e-17 2.85684e-17 -1.08265e-15) OK.
-    Max cell openness = 3.06625e-16 OK.
+    Boundary openness (6.1375e-17 2.4103e-17 -1.0522e-15) OK.
+    Max cell openness = 3.17887e-16 OK.
     Max aspect ratio = 4.69166 OK.
     Minimum face area = 0.00144384. Maximum face area = 0.0121811.  Face area magnitudes OK.
     Min volume = 0.000103383. Max volume = 0.00112284.  Total volume = 53.7494.  Cell volumes OK.
