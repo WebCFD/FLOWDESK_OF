@@ -25,24 +25,30 @@ FoamFile
 // Faces: 2
 // Patch 4: wall_0F_5
 // Faces: 2
-// Patch 5: wall_0F_6
-// Faces: 2
-// Patch 6: floor_0F
-// Faces: 4
-// Patch 7: ceil_0F
+// Patch 5: floor_0F
+// Faces: 3
+// Patch 6: ceil_0F
 // Faces: 15
-// Patch 8: stair_0F_1
+// Patch 7: stair_0F_1
 // Faces: 8
-// Patch 9: stair_0F_2
-// Faces: 6
+// Patch 8: stair_0F_2
+// Faces: 8
+// Patch 9: stair_0F_3
+// Faces: 8
 // Patch 10: wall_1F_1
 // Faces: 2
 // Patch 11: wall_1F_2
 // Faces: 2
 // Patch 12: wall_1F_3
 // Faces: 2
-// Patch 13: floor_1F
-// Faces: 12
-// Patch 14: ceil_1F
-// Faces: 1
+// Patch 13: wall_1F_4
+// Faces: 2
+// Patch 14: wall_1F_5
+// Faces: 2
+// Patch 15: floor_1F
+// Faces: 15
+// Patch 16: ceil_1F
+// Faces: 10
+// Patch 17: stair_1F_1
+// Faces: 16
 

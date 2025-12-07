@@ -753,13 +753,16 @@ def create_volumes(building_config_data: Dict[str, Any], valid_floors: List[str]
     logger.info(f"    * Processing {len(valid_floors)} valid floor levels")
     logger.info(f"    * Using LAYER-BASED ARCHITECTURE for robust geometry creation\n")
 
-    for floor_name in valid_floors:
+    for idx, floor_name in enumerate(valid_floors):
         floor_config = building_config_data["levels"][floor_name]
         logger.info(f"    * Creating geometry for floor #{floor_name}")
         performance_monitor.update_memory()
         
         floor_deck_thickness = floor_config["deck"]
         floor_height = floor_config["height"]
+        
+        # Detect if this is the top floor
+        is_top_floor = (idx == len(valid_floors) - 1)
         
         # CREATE ROOM GEOMETRY using layer-based architecture
         # This replaces create_floor_mesh() and integrates stair creation
@@ -768,7 +771,8 @@ def create_volumes(building_config_data: Dict[str, Any], valid_floors: List[str]
         boundary_conditions_df, room_mesh, current_stair_tubes = create_floor_mesh_layered(
             boundary_conditions_df, floor_name, floor_config, 
             base_height=current_floor_elevation,
-            previous_stair_tubes=previous_stair_tubes
+            previous_stair_tubes=previous_stair_tubes,
+            is_top_floor=is_top_floor
         )
         room_geometry_meshes.append(room_mesh)
         

@@ -387,11 +387,13 @@ def find_cells_in_polygon(mesh: pv.PolyData, polygon: shapely.Polygon, z_toleran
 def create_ceiling_layer_from_json(patch_df: pd.DataFrame, ceiling_polygon: shapely.Polygon,
                                    level_name: str, ceiling_data: Dict[str, Any],
                                    ceiling_height: float, stairs_config: List[Dict[str, Any]],
-                                   create_entries_func, polygon_to_mesh_func) -> Tuple[pd.DataFrame, pv.PolyData]:
+                                   create_entries_func, polygon_to_mesh_func) -> Tuple[pd.DataFrame, pv.PolyData, List[shapely.Polygon]]:
     """
     Create ceiling from same polygon as floor.
     Air entries are created as PATCHES (regions with different boundary conditions).
     Stair openings are created by subtracting stair polygons from ceiling polygon (2D operation).
+    
+    ROBUST: Clips stair polygons to ceiling bounds if they extend outside.
     
     Args:
         patch_df: DataFrame with patch information
@@ -404,7 +406,7 @@ def create_ceiling_layer_from_json(patch_df: pd.DataFrame, ceiling_polygon: shap
         polygon_to_mesh_func: Reference to polygon_to_mesh_2d() function
         
     Returns:
-        Tuple of (updated patch_df, ceiling mesh)
+        Tuple of (updated patch_df, ceiling mesh, list of clipped stair polygons)
     """
     logger.info(f"    [PHASE 2.3] Creating ceiling layer from JSON coordinates")
     
@@ -418,6 +420,9 @@ def create_ceiling_layer_from_json(patch_df: pd.DataFrame, ceiling_polygon: shap
     
     # Process air entries in ceiling (get polygons only)
     patch_df, entries_dict = create_entries_func(patch_df, ceiling_data.get('airEntries', []), 0, p0, udir, vdir)
+    
+    # Track clipped stair polygons for stair tube creation
+    clipped_stair_polygons = []
     
     # Subtract stair openings from ceiling polygon (2D operation with Shapely)
     if stairs_config:
@@ -434,13 +439,42 @@ def create_ceiling_layer_from_json(patch_df: pd.DataFrame, ceiling_polygon: shap
             if len(stair_points) >= 4:  # At least 3 unique points + closing
                 stair_polygon = shapely.Polygon(stair_points)
                 if stair_polygon.is_valid and stair_polygon.area > 0:
-                    # Subtract stair polygon from ceiling
+                    # ✅ NEW: Check if stair extends outside ceiling bounds
+                    if not ceiling_polygon.contains(stair_polygon):
+                        if ceiling_polygon.intersects(stair_polygon):
+                            # Stair partially outside - CLIP to ceiling bounds
+                            logger.warning(f"        ⚠️  Stair '{stair['id']}' extends outside ceiling bounds")
+                            logger.info(f"           → Clipping stair to ceiling boundaries")
+                            
+                            # Clip stair polygon to ceiling bounds
+                            stair_polygon_clipped = stair_polygon.intersection(ceiling_polygon)
+                            
+                            # Handle MultiPolygon result (intersection can return multiple polygons)
+                            if isinstance(stair_polygon_clipped, shapely.MultiPolygon):
+                                # Take the largest polygon
+                                stair_polygon_clipped = max(stair_polygon_clipped.geoms, key=lambda p: p.area)
+                            
+                            logger.info(f"           → Original area: {stair_polygon.area:.3f} m²")
+                            logger.info(f"           → Clipped area: {stair_polygon_clipped.area:.3f} m²")
+                            
+                            stair_polygon = stair_polygon_clipped
+                        else:
+                            # Stair completely outside - ERROR
+                            logger.error(f"        ❌ Stair '{stair['id']}' is completely outside ceiling bounds")
+                            raise ValueError(f"Stair '{stair['id']}' must intersect with ceiling")
+                    
+                    # Store clipped polygon for stair tube creation
+                    clipped_stair_polygons.append(stair_polygon)
+                    
+                    # Subtract (now clipped) stair polygon from ceiling
                     ceiling_polygon = ceiling_polygon.difference(stair_polygon)
                     logger.info(f"        ✓ Stair opening {idx}/{len(stairs_config)}: '{stair['id']}' (area: {stair_polygon.area:.3f} m²)")
                 else:
                     logger.warning(f"        ⚠️  Stair {idx}: Invalid polygon, skipping")
+                    clipped_stair_polygons.append(None)
             else:
                 logger.warning(f"        ⚠️  Stair {idx}: Insufficient points ({len(stair_points)-1}), skipping")
+                clipped_stair_polygons.append(None)
     
     # Create ceiling mesh from FULL polygon (with stair openings already subtracted)
     from src.components.geo.create_volumes import get_wall_bc_dict
@@ -469,47 +503,81 @@ def create_ceiling_layer_from_json(patch_df: pd.DataFrame, ceiling_polygon: shap
                 logger.warning(f"      ⚠️  Entry '{entry_id}': No cells found in polygon")
     
     logger.info(f"    ✓ Ceiling layer complete: '{ceiling_id}' ({ceiling_mesh.n_cells} cells, with stair openings)")
-    return patch_df, ceiling_mesh
+    return patch_df, ceiling_mesh, clipped_stair_polygons
 
 
 def create_stair_tubes(patch_df: pd.DataFrame, stairs_config: List[Dict[str, Any]],
-                      ceiling_height: float, deck_thickness: float) -> Tuple[pd.DataFrame, List[pv.PolyData]]:
+                      clipped_stair_polygons: List[Optional[shapely.Polygon]],
+                      ceiling_height: float, deck_thickness: float,
+                      is_top_floor: bool = False) -> Tuple[pd.DataFrame, List[pv.PolyData]]:
     """
     Create stair tubes that extrude only by deck_thickness (not full floor height).
     Stair tubes are created WITHOUT top/bottom caps to allow air circulation.
     
+    ROBUST: Uses clipped stair polygons to match ceiling openings exactly.
+    SPECIAL: If is_top_floor=True, creates caps on top to close the geometry.
+    
     Args:
         patch_df: DataFrame with patch information
         stairs_config: List of stair configurations
+        clipped_stair_polygons: List of clipped stair polygons from ceiling layer
         ceiling_height: Height of the ceiling
         deck_thickness: Thickness of the deck
+        is_top_floor: Whether this is the top floor (closes stair tubes on top)
         
     Returns:
         Tuple of (updated patch_df, list of stair tube meshes)
     """
-    logger.info(f"    [PHASE 2.4] Creating stair tubes ({len(stairs_config)} stairs)")
+    if is_top_floor and stairs_config:
+        logger.warning(f"    [PHASE 2.4] Creating stair tubes on TOP FLOOR ({len(stairs_config)} stairs)")
+        logger.warning(f"      ⚠️  Stairs on top floor will be CAPPED on top (no floor above)")
+    else:
+        logger.info(f"    [PHASE 2.4] Creating stair tubes ({len(stairs_config)} stairs)")
     
     stair_tubes = []
     
-    for idx, stair in enumerate(stairs_config, 1):
+    for idx, (stair, clipped_polygon) in enumerate(zip(stairs_config, clipped_stair_polygons), 1):
         from src.components.geo.create_volumes import get_wall_bc_dict
         
         stair_id = stair['id']
         new_patch = get_wall_bc_dict(stair_id)
         patch_df = pd.concat([patch_df, pd.DataFrame([new_patch])], ignore_index=True)
         
-        # Create 2D polygon from stair lines
-        points = []
-        connectivity = []
-        for i, line in enumerate(stair['lines']):
-            p0 = np.array([line['start']['x'], line['start']['y'], ceiling_height - VOLUMES_TOLERANCE])
-            p1 = np.array([line['end']['x'], line['end']['y'], ceiling_height - VOLUMES_TOLERANCE])
-            if len(points) == 0:
-                points = np.vstack((p0, p1))
-            else:
-                points = np.vstack((points, p0))
-                points = np.vstack((points, p1))
-            connectivity.extend([2, 2*i, 2*i + 1])
+        # ✅ NEW: Use clipped polygon if available, otherwise use original lines
+        if clipped_polygon is not None:
+            logger.info(f"      - Using clipped polygon for stair tube '{stair_id}'")
+            
+            # Extract points from clipped polygon
+            coords = list(clipped_polygon.exterior.coords)[:-1]  # Remove duplicate closing point
+            points = []
+            connectivity = []
+            
+            for i, (x, y) in enumerate(coords):
+                p0 = np.array([x, y, ceiling_height - VOLUMES_TOLERANCE])
+                points.append(p0)
+                
+                # Create line connectivity
+                if i < len(coords) - 1:
+                    connectivity.extend([2, i, i + 1])
+                else:
+                    # Close the loop
+                    connectivity.extend([2, i, 0])
+            
+            points = np.array(points)
+        else:
+            # Fallback: use original stair lines
+            logger.info(f"      - Using original lines for stair tube '{stair_id}'")
+            points = []
+            connectivity = []
+            for i, line in enumerate(stair['lines']):
+                p0 = np.array([line['start']['x'], line['start']['y'], ceiling_height - VOLUMES_TOLERANCE])
+                p1 = np.array([line['end']['x'], line['end']['y'], ceiling_height - VOLUMES_TOLERANCE])
+                if len(points) == 0:
+                    points = np.vstack((p0, p1))
+                else:
+                    points = np.vstack((points, p0))
+                    points = np.vstack((points, p1))
+                connectivity.extend([2, 2*i, 2*i + 1])
         
         poly_mesh = pv.PolyData()
         poly_mesh.points = points
@@ -517,10 +585,11 @@ def create_stair_tubes(patch_df: pd.DataFrame, stairs_config: List[Dict[str, Any
         poly_mesh.clean(inplace=True)
         poly_filled = poly_mesh.triangulate_contours()
         
-        # Extrude ONLY by deck_thickness WITHOUT caps (capping=False)
-        # This creates an open tube allowing air circulation between floors
+        # ✅ NEW: If top floor, cap the tube on top to close geometry
+        # Otherwise, create open tube for air circulation between floors
         extrusion_height = deck_thickness + 2*VOLUMES_TOLERANCE
-        stair_tube = poly_filled.extrude([0, 0, extrusion_height], capping=False)
+        capping = is_top_floor  # Cap only if top floor
+        stair_tube = poly_filled.extrude([0, 0, extrusion_height], capping=capping)
         stair_tube.compute_normals(inplace=True, auto_orient_normals=True, 
                                    consistent_normals=True, split_vertices=True, 
                                    point_normals=False)
@@ -532,10 +601,14 @@ def create_stair_tubes(patch_df: pd.DataFrame, stairs_config: List[Dict[str, Any
         stair_tube = optimize_mesh_memory(stair_tube)
         stair_tubes.append(stair_tube)
         
+        cap_status = "CAPPED on top" if is_top_floor else "OPEN ends"
         logger.info(f"      ✓ Stair tube {idx}/{len(stairs_config)}: '{stair_id}' "
-                   f"({stair_tube.n_cells} cells, extrusion: {extrusion_height:.3f}m, OPEN ends)")
+                   f"({stair_tube.n_cells} cells, extrusion: {extrusion_height:.3f}m, {cap_status})")
     
-    logger.info(f"    ✓ Stair tubes complete: {len(stair_tubes)} open tubes created (air can circulate)")
+    if is_top_floor:
+        logger.info(f"    ✓ Stair tubes complete: {len(stair_tubes)} tubes created (CAPPED on top - no floor above)")
+    else:
+        logger.info(f"    ✓ Stair tubes complete: {len(stair_tubes)} open tubes created (air can circulate)")
     return patch_df, stair_tubes
 
 
@@ -711,7 +784,8 @@ def merge_and_validate(wall_meshes: List[pv.PolyData], floor_mesh: pv.PolyData,
 
 def create_floor_mesh_layered(patch_df: pd.DataFrame, level_name: str, 
                              level_data: Dict[str, Any], base_height: float,
-                             previous_stair_tubes: Optional[List[pv.PolyData]] = None) -> Tuple[pd.DataFrame, pv.PolyData, List[pv.PolyData]]:
+                             previous_stair_tubes: Optional[List[pv.PolyData]] = None,
+                             is_top_floor: bool = False) -> Tuple[pd.DataFrame, pv.PolyData, List[pv.PolyData]]:
     """
     Create floor mesh using layer-based architecture with 7 phases.
     
@@ -720,6 +794,7 @@ def create_floor_mesh_layered(patch_df: pd.DataFrame, level_name: str,
     - Stair tubes extrude only by deck_thickness
     - Boolean operations are mandatory
     - Waterproof validation at the end
+    - Top floor stairs are capped to close geometry
     
     Args:
         patch_df: DataFrame with patch information
@@ -727,6 +802,7 @@ def create_floor_mesh_layered(patch_df: pd.DataFrame, level_name: str,
         level_data: Level configuration data
         base_height: Base elevation
         previous_stair_tubes: Stair tubes from previous floor (to subtract from current floor)
+        is_top_floor: Whether this is the top floor (caps stair tubes on top)
         
     Returns:
         Tuple of (updated patch_df, floor mesh, current stair tubes for next floor)
@@ -784,14 +860,17 @@ def create_floor_mesh_layered(patch_df: pd.DataFrame, level_name: str,
     )
     
     # PHASE 2.3: Create ceiling layer (with stair openings already subtracted in 2D)
-    patch_df, ceiling_mesh = create_ceiling_layer_from_json(
+    # Returns clipped stair polygons for stair tube creation
+    patch_df, ceiling_mesh, clipped_stair_polygons = create_ceiling_layer_from_json(
         patch_df, ceiling_polygon, level_name, level_data.get("ceiling", {}),
         ceiling_height, level_data.get("stairs", []), create_entries, polygon_to_mesh_2d
     )
     
-    # PHASE 2.4: Create stair tubes (for current floor)
+    # PHASE 2.4: Create stair tubes (for current floor) using clipped polygons
+    # Pass is_top_floor to cap tubes on top floor
     patch_df, current_stair_tubes = create_stair_tubes(
-        patch_df, level_data.get("stairs", []), ceiling_height, deck_thickness
+        patch_df, level_data.get("stairs", []), clipped_stair_polygons,
+        ceiling_height, deck_thickness, is_top_floor=is_top_floor
     )
     
     # PHASE 2.5: No longer needed - stair openings already created in ceiling polygon
