@@ -405,7 +405,12 @@ def create_entries(patch_df, entries_data, base_height, p0, udir, vdir):
     for entry_data in entries_data:
         new_patch, polygon = create_single_entry(entry_data, base_height, p0, udir, vdir)
         patch_df = pd.concat([patch_df, pd.DataFrame([new_patch])], ignore_index=True)
-        entries_dict[entry_data['id']] = polygon
+        
+        # ✅ FIX: Use sanitized ID (same as in patch_df) to avoid lookup errors
+        # get_entry_bc_dict() sanitizes IDs by replacing spaces with underscores
+        sanitized_id = entry_data['id'].replace(' ', '_')
+        entries_dict[sanitized_id] = polygon
+    
     return patch_df, entries_dict
 
 

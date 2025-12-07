@@ -1,0 +1,290 @@
+{
+  "version": "1.0",
+  "levels": {
+    "0": {
+      "height": 2.2,
+      "deck": 0.35,
+      "ceiling": {
+        "temp": 20,
+        "airEntries": [
+          {
+            "id": "Vent 0F-3",
+            "type": "vent",
+            "position": {
+              "x": 1.6953821362915291,
+              "y": -0.5704230976244447,
+              "z": 2.2,
+              "normal": {
+                "x": 0,
+                "y": 0,
+                "z": -1
+              }
+            },
+            "dimensions": {
+              "width": 0.5,
+              "height": 0.5,
+              "shape": "rectangular"
+            },
+            "simulation": {
+              "state": "open",
+              "temperature": 20,
+              "airDirection": "inflow",
+              "airOrientation": {
+                "verticalAngle": 0,
+                "horizontalAngle": 0
+              },
+              "flowType": "Air Mass Flow",
+              "flowIntensity": "medium"
+            }
+          }
+        ]
+      },
+      "floor": {
+        "temp": 20,
+        "airEntries": [
+          {
+            "id": "Vent 0F-1",
+            "type": "vent",
+            "position": {
+              "x": -1.3610539049317167,
+              "y": -0.7849546221716992,
+              "z": 1.1368683772161603e-15,
+              "normal": {
+                "x": 0,
+                "y": 0,
+                "z": 1
+              }
+            },
+            "dimensions": {
+              "width": 0.5,
+              "height": 0.5,
+              "shape": "rectangular"
+            },
+            "simulation": {
+              "state": "open",
+              "temperature": 20,
+              "airDirection": "inflow",
+              "airOrientation": {
+                "verticalAngle": 0,
+                "horizontalAngle": 0
+              },
+              "flowType": "Air Mass Flow",
+              "flowIntensity": "medium"
+            }
+          },
+          {
+            "id": "Vent 0F-2",
+            "type": "vent",
+            "position": {
+              "x": 0.4046119840601753,
+              "y": -0.29028807521828187,
+              "z": 0,
+              "normal": {
+                "x": 0,
+                "y": 0,
+                "z": 1
+              }
+            },
+            "dimensions": {
+              "width": 0.5,
+              "height": 0.5,
+              "shape": "rectangular"
+            },
+            "simulation": {
+              "state": "open",
+              "temperature": 20,
+              "airDirection": "inflow",
+              "airOrientation": {
+                "verticalAngle": 0,
+                "horizontalAngle": 0
+              },
+              "flowType": "Air Mass Flow",
+              "flowIntensity": "medium"
+            }
+          }
+        ]
+      },
+      "walls": [
+        {
+          "id": "wall_0F_1",
+          "start": {
+            "x": -2.35,
+            "y": -2.3
+          },
+          "end": {
+            "x": 1.6,
+            "y": -2.25
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_2",
+          "start": {
+            "x": 1.6,
+            "y": -2.25
+          },
+          "end": {
+            "x": 2.75,
+            "y": 0.7
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_3",
+          "start": {
+            "x": 2.75,
+            "y": 0.7
+          },
+          "end": {
+            "x": -0.4,
+            "y": 2.05
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_4",
+          "start": {
+            "x": -0.4,
+            "y": 2.05
+          },
+          "end": {
+            "x": -2.75,
+            "y": 0.9
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_5",
+          "start": {
+            "x": -2.75,
+            "y": 0.9
+          },
+          "end": {
+            "x": -2.35,
+            "y": -2.3
+          },
+          "temp": 20,
+          "airEntries": []
+        }
+      ],
+      "stairs": [],
+      "furniture": []
+    },
+    "1": {
+      "height": 2.2,
+      "deck": 0.35,
+      "ceiling": {
+        "temp": 20,
+        "airEntries": [
+          {
+            "id": "Vent 1F-1",
+            "type": "vent",
+            "position": {
+              "x": -1.9234962181601771,
+              "y": -0.5799511952688272,
+              "z": 4.75,
+              "normal": {
+                "x": 0,
+                "y": 0,
+                "z": -1
+              }
+            },
+            "dimensions": {
+              "width": 0.5,
+              "height": 0.5,
+              "shape": "rectangular"
+            },
+            "simulation": {
+              "state": "open",
+              "temperature": 20,
+              "airDirection": "inflow",
+              "airOrientation": {
+                "verticalAngle": 0,
+                "horizontalAngle": 0
+              },
+              "flowType": "Air Mass Flow",
+              "flowIntensity": "medium"
+            }
+          }
+        ]
+      },
+      "floor": {
+        "temp": 20,
+        "airEntries": []
+      },
+      "walls": [
+        {
+          "id": "wall_1F_1",
+          "start": {
+            "x": -2.35,
+            "y": -2.3
+          },
+          "end": {
+            "x": 1.6,
+            "y": -2.25
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_1F_2",
+          "start": {
+            "x": 1.6,
+            "y": -2.25
+          },
+          "end": {
+            "x": 2.75,
+            "y": 0.7
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_1F_3",
+          "start": {
+            "x": 2.75,
+            "y": 0.7
+          },
+          "end": {
+            "x": -0.4,
+            "y": 2.05
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_1F_4",
+          "start": {
+            "x": -0.4,
+            "y": 2.05
+          },
+          "end": {
+            "x": -2.75,
+            "y": 0.9
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_1F_5",
+          "start": {
+            "x": -2.75,
+            "y": 0.9
+          },
+          "end": {
+            "x": -2.35,
+            "y": -2.3
+          },
+          "temp": 20,
+          "airEntries": []
+        }
+      ],
+      "stairs": [],
+      "furniture": []
+    }
+  }
+}

@@ -277,8 +277,11 @@ def create_floor_layer_from_json(patch_df: pd.DataFrame, floor_polygon: shapely.
                                  base_height: float, previous_stairs_config: List[Dict[str, Any]],
                                  create_entries_func, polygon_to_mesh_func) -> Tuple[pd.DataFrame, pv.PolyData]:
     """
-    Create floor from JSON coordinates.
-    Stair openings are created by subtracting stair polygons from floor polygon (2D operation).
+    Create floor from JSON coordinates with air entries as SEPARATE REGIONS.
+    
+    Uses boolean operations (like stairs) for robustness:
+    - Stair openings: Physical holes (difference operation)
+    - Air entries: Separate regions with different patch_ids (difference + separate triangulation)
     
     Args:
         patch_df: DataFrame with patch information
@@ -306,13 +309,12 @@ def create_floor_layer_from_json(patch_df: pd.DataFrame, floor_polygon: shapely.
     # Process air entries in floor
     patch_df, entries_dict = create_entries_func(patch_df, floor_data.get('airEntries', []), 0, p0, udir, vdir)
     
-    # Subtract air entries from floor polygon
     if entries_dict:
-        logger.info(f"      - Subtracting {len(entries_dict)} air entries from floor")
-        all_entries_union = shapely.unary_union(list(entries_dict.values()))
-        floor_polygon = floor_polygon.difference(all_entries_union)
+        logger.info(f"      - Air entries created: {len(entries_dict)}")
+        for entry_id, entry_polygon in entries_dict.items():
+            logger.info(f"        [ENTRY] '{entry_id}': bounds={entry_polygon.bounds}, area={entry_polygon.area:.6f} m²")
     
-    # Subtract stair openings from floor polygon (2D operation with Shapely)
+    # Subtract stair openings from floor polygon (physical holes)
     if previous_stairs_config:
         logger.info(f"      - Creating {len(previous_stairs_config)} stair openings in floor (2D subtraction)")
         for idx, stair in enumerate(previous_stairs_config, 1):
@@ -335,28 +337,43 @@ def create_floor_layer_from_json(patch_df: pd.DataFrame, floor_polygon: shapely.
             else:
                 logger.warning(f"        ⚠️  Stair {idx}: Insufficient points ({len(stair_points)-1}), skipping")
     
-    # Create floor mesh from polygon (with stair openings already subtracted)
+    # ✅ NEW APPROACH: Create main floor region (floor - entries) using boolean operations
+    main_floor_polygon = floor_polygon
+    if entries_dict:
+        logger.info(f"      - Subtracting {len(entries_dict)} air entries from main floor region (2D boolean)")
+        for entry_id, entry_polygon in entries_dict.items():
+            main_floor_polygon = main_floor_polygon.difference(entry_polygon)
+            logger.info(f"        ✓ Entry '{entry_id}' subtracted from main floor")
+    
+    # Create main floor patch
     from src.components.geo.create_volumes import get_wall_bc_dict
     new_patch = get_wall_bc_dict(floor_id, temperature=floor_data.get('temp', 20))
     patch_df = pd.concat([patch_df, pd.DataFrame([new_patch])], ignore_index=True)
     
-    floor_mesh = polygon_to_mesh_func(floor_polygon, z_floor, patch_df, floor_id)
-    logger.info(f"      - Created floor mesh: {floor_mesh.n_cells} cells")
+    # Triangulate main floor region
+    main_floor_mesh = polygon_to_mesh_func(main_floor_polygon, z_floor, patch_df, floor_id)
+    logger.info(f"      - Main floor region: {main_floor_mesh.n_cells} cells")
     
-    # Assign different patch_ids to cells inside air entry regions
+    # Triangulate each entry as separate region
+    entry_meshes = []
     if entries_dict:
-        logger.info(f"      - Assigning patch_ids to {len(entries_dict)} air entry regions")
+        logger.info(f"      - Creating {len(entries_dict)} air entry regions (separate triangulation)")
         for entry_id, entry_polygon in entries_dict.items():
-            cells_in_entry = find_cells_in_polygon(floor_mesh, entry_polygon)
+            # Verify that entry_id exists in patch_df before triangulation
+            if entry_id not in patch_df['id'].values:
+                logger.error(f"        ❌ Entry '{entry_id}' not found in patch_df")
+                logger.error(f"        Available IDs: {list(patch_df['id'].values)}")
+                raise ValueError(f"Entry '{entry_id}' not found in patch_df")
             
-            if len(cells_in_entry) > 0:
-                entry_patch_idx = patch_df.index[patch_df['id'] == entry_id][0].astype(np.int16)
-                floor_mesh.cell_data['patch_id'][cells_in_entry] = entry_patch_idx
-                logger.info(f"      ✓ Entry '{entry_id}': {len(cells_in_entry)} cells assigned")
-            else:
-                logger.warning(f"      ⚠️  Entry '{entry_id}': No cells found in polygon")
+            entry_mesh = polygon_to_mesh_func(entry_polygon, z_floor, patch_df, entry_id)
+            entry_meshes.append(entry_mesh)
+            logger.info(f"        ✓ Entry '{entry_id}': {entry_mesh.n_cells} cells")
     
-    logger.info(f"    ✓ Floor layer complete: '{floor_id}' ({floor_mesh.n_cells} cells, with stair openings)")
+    # Merge all regions (main floor + entries)
+    all_floor_meshes = [main_floor_mesh] + entry_meshes
+    floor_mesh = pv.merge(all_floor_meshes)
+    
+    logger.info(f"    ✓ Floor layer complete: '{floor_id}' ({floor_mesh.n_cells} cells total, {len(entry_meshes)} entry regions)")
     return patch_df, floor_mesh
 
 
@@ -372,7 +389,20 @@ def find_cells_in_polygon(mesh: pv.PolyData, polygon: shapely.Polygon, z_toleran
     Returns:
         Array of cell indices that are inside the polygon
     """
+    # DEBUG: Log polygon and mesh information
+    logger.info(f"      [DEBUG] find_cells_in_polygon() called")
+    logger.info(f"      [DEBUG] Polygon bounds: {polygon.bounds}")
+    logger.info(f"      [DEBUG] Polygon area: {polygon.area:.6f} m²")
+    logger.info(f"      [DEBUG] Mesh total cells: {mesh.n_cells}")
+    logger.info(f"      [DEBUG] Mesh Z range: [{mesh.points[:, 2].min():.6f}, {mesh.points[:, 2].max():.6f}]")
+    logger.info(f"      [DEBUG] Mesh X range: [{mesh.points[:, 0].min():.3f}, {mesh.points[:, 0].max():.3f}]")
+    logger.info(f"      [DEBUG] Mesh Y range: [{mesh.points[:, 1].min():.3f}, {mesh.points[:, 1].max():.3f}]")
+    
     cell_centers = mesh.cell_centers().points
+    logger.info(f"      [DEBUG] First 5 cell centers (X, Y, Z):")
+    for i in range(min(5, len(cell_centers))):
+        logger.info(f"        Cell {i}: ({cell_centers[i][0]:.3f}, {cell_centers[i][1]:.3f}, {cell_centers[i][2]:.3f})")
+    
     cells_in_polygon = []
     
     for i, center in enumerate(cell_centers):
@@ -380,6 +410,9 @@ def find_cells_in_polygon(mesh: pv.PolyData, polygon: shapely.Polygon, z_toleran
         point = shapely.Point(center[0], center[1])
         if polygon.contains(point) or polygon.touches(point):
             cells_in_polygon.append(i)
+            logger.info(f"      [DEBUG] Cell {i} INSIDE polygon: ({center[0]:.3f}, {center[1]:.3f})")
+    
+    logger.info(f"      [DEBUG] Total cells found in polygon: {len(cells_in_polygon)}")
     
     return np.array(cells_in_polygon, dtype=np.int32)
 
@@ -418,8 +451,13 @@ def create_ceiling_layer_from_json(patch_df: pd.DataFrame, ceiling_polygon: shap
     udir = np.array([1, 0, 0])
     vdir = np.array([0, 1, 0])
     
-    # Process air entries in ceiling (get polygons only)
+    # Process air entries in ceiling
     patch_df, entries_dict = create_entries_func(patch_df, ceiling_data.get('airEntries', []), 0, p0, udir, vdir)
+    
+    if entries_dict:
+        logger.info(f"      - Air entries created: {len(entries_dict)}")
+        for entry_id, entry_polygon in entries_dict.items():
+            logger.info(f"        [ENTRY] '{entry_id}': bounds={entry_polygon.bounds}, area={entry_polygon.area:.6f} m²")
     
     # Track clipped stair polygons for stair tube creation
     clipped_stair_polygons = []
@@ -476,33 +514,37 @@ def create_ceiling_layer_from_json(patch_df: pd.DataFrame, ceiling_polygon: shap
                 logger.warning(f"        ⚠️  Stair {idx}: Insufficient points ({len(stair_points)-1}), skipping")
                 clipped_stair_polygons.append(None)
     
-    # Create ceiling mesh from FULL polygon (with stair openings already subtracted)
+    # ✅ NEW APPROACH: Create main ceiling region (ceiling - entries) using boolean operations
+    main_ceiling_polygon = ceiling_polygon
+    if entries_dict:
+        logger.info(f"      - Subtracting {len(entries_dict)} air entries from main ceiling region (2D boolean)")
+        for entry_id, entry_polygon in entries_dict.items():
+            main_ceiling_polygon = main_ceiling_polygon.difference(entry_polygon)
+            logger.info(f"        ✓ Entry '{entry_id}' subtracted from main ceiling")
+    
+    # Create main ceiling patch
     from src.components.geo.create_volumes import get_wall_bc_dict
     new_patch = get_wall_bc_dict(ceiling_id, temperature=ceiling_data.get('temp', 20))
     patch_df = pd.concat([patch_df, pd.DataFrame([new_patch])], ignore_index=True)
     
-    ceiling_mesh = polygon_to_mesh_func(ceiling_polygon, z_ceiling, patch_df, ceiling_id)
-    logger.info(f"      - Created ceiling mesh: {ceiling_mesh.n_cells} cells")
+    # Triangulate main ceiling region
+    main_ceiling_mesh = polygon_to_mesh_func(main_ceiling_polygon, z_ceiling, patch_df, ceiling_id)
+    logger.info(f"      - Main ceiling region: {main_ceiling_mesh.n_cells} cells")
     
-    # Assign different patch_ids to cells inside air entry regions
+    # Triangulate each entry as separate region
+    entry_meshes = []
     if entries_dict:
-        logger.info(f"      - Assigning patch_ids to {len(entries_dict)} air entry regions")
+        logger.info(f"      - Creating {len(entries_dict)} air entry regions (separate triangulation)")
         for entry_id, entry_polygon in entries_dict.items():
-            # Find cells inside this entry polygon
-            cells_in_entry = find_cells_in_polygon(ceiling_mesh, entry_polygon)
-            
-            if len(cells_in_entry) > 0:
-                # Get patch index for this entry
-                entry_patch_idx = patch_df.index[patch_df['id'] == entry_id][0].astype(np.int16)
-                
-                # Assign patch_id to these cells
-                ceiling_mesh.cell_data['patch_id'][cells_in_entry] = entry_patch_idx
-                
-                logger.info(f"      ✓ Entry '{entry_id}': {len(cells_in_entry)} cells assigned")
-            else:
-                logger.warning(f"      ⚠️  Entry '{entry_id}': No cells found in polygon")
+            entry_mesh = polygon_to_mesh_func(entry_polygon, z_ceiling, patch_df, entry_id)
+            entry_meshes.append(entry_mesh)
+            logger.info(f"        ✓ Entry '{entry_id}': {entry_mesh.n_cells} cells")
     
-    logger.info(f"    ✓ Ceiling layer complete: '{ceiling_id}' ({ceiling_mesh.n_cells} cells, with stair openings)")
+    # Merge all regions (main ceiling + entries)
+    all_ceiling_meshes = [main_ceiling_mesh] + entry_meshes
+    ceiling_mesh = pv.merge(all_ceiling_meshes)
+    
+    logger.info(f"    ✓ Ceiling layer complete: '{ceiling_id}' ({ceiling_mesh.n_cells} cells total, {len(entry_meshes)} entry regions)")
     return patch_df, ceiling_mesh, clipped_stair_polygons
 
 

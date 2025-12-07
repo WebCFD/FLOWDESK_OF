@@ -8,8 +8,30 @@ import os
 import json
 import sys
 import argparse
+import logging
 from pathlib import Path
 from datetime import datetime
+
+# =============================================================================
+# LOGGING CONFIGURATION (ROBUST)
+# =============================================================================
+# Configure logging at the very beginning to capture all messages
+logging.basicConfig(
+    level=logging.INFO,  # Show INFO, WARNING, ERROR, CRITICAL
+    format='%(levelname)-8s - %(name)-30s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+# Set specific loggers to INFO level to ensure they are not filtered
+logging.getLogger('src.components.geo').setLevel(logging.INFO)
+logging.getLogger('src.components.geo.create_volumes').setLevel(logging.INFO)
+logging.getLogger('src.components.geo.create_volumes_layered').setLevel(logging.INFO)
+logging.getLogger('__main__').setLevel(logging.INFO)
+
+logger = logging.getLogger(__name__)
+logger.info("="*70)
+logger.info("FLOWDESK PIPELINE - Logging configured at INFO level")
+logger.info("="*70)
 
 # =============================================================================
 # EXECUTION MODE CONFIGURATION
