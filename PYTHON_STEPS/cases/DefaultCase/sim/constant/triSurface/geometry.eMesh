@@ -15,40 +15,80 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Patch 0: wall_0F_1
+// Patch 0: wall_0F_3
 // Faces: 2
-// Patch 1: wall_0F_2
+// Patch 1: wall_0F_4
+// Faces: 18
+// Patch 2: window_0F_1
 // Faces: 2
-// Patch 2: wall_0F_3
+// Patch 3: door_0F_1
 // Faces: 2
-// Patch 3: wall_0F_4
+// Patch 4: vent_0F_1
 // Faces: 2
-// Patch 4: wall_0F_5
+// Patch 5: wall_0F_5
+// Faces: 18
+// Patch 6: window_0F_2
 // Faces: 2
-// Patch 5: Vent_0F-1
+// Patch 7: door_0F_2
 // Faces: 2
-// Patch 6: Vent_0F-2
+// Patch 8: vent_0F_2
 // Faces: 2
-// Patch 7: floor_0F
-// Faces: 15
-// Patch 8: Vent_0F-3
+// Patch 9: wall_0F_6
+// Faces: 18
+// Patch 10: window_0F_3
 // Faces: 2
-// Patch 9: ceil_0F
-// Faces: 9
-// Patch 10: wall_1F_1
+// Patch 11: door_0F_3
 // Faces: 2
-// Patch 11: wall_1F_2
+// Patch 12: vent_0F_3
 // Faces: 2
-// Patch 12: wall_1F_3
+// Patch 13: floor_0F
 // Faces: 2
-// Patch 13: wall_1F_4
+// Patch 14: ceil_0F
+// Faces: 8
+// Patch 15: stair_0F_1
+// Faces: 8
+// Patch 16: wall_1F_1
+// Faces: 18
+// Patch 17: window_1F_1
 // Faces: 2
-// Patch 14: wall_1F_5
+// Patch 18: door_1F_1
 // Faces: 2
-// Patch 15: floor_1F
-// Faces: 3
-// Patch 16: Vent_1F-1
+// Patch 19: vent_1F_1
 // Faces: 2
-// Patch 17: ceil_1F
-// Faces: 9
+// Patch 20: wall_1F_2
+// Faces: 2
+// Patch 21: wall_1F_3
+// Faces: 2
+// Patch 22: wall_1F_4
+// Faces: 2
+// Patch 23: floor_1F
+// Faces: 8
+// Patch 24: ceil_1F
+// Faces: 12
+// Patch 25: stair_1F_1
+// Faces: 8
+// Patch 26: stair_1F_2
+// Faces: 8
+// Patch 27: wall_2F_1
+// Faces: 2
+// Patch 28: wall_2F_2
+// Faces: 2
+// Patch 29: wall_2F_3
+// Faces: 18
+// Patch 30: window_2F_1
+// Faces: 2
+// Patch 31: door_2F_1
+// Faces: 2
+// Patch 32: vent_2F_1
+// Faces: 2
+// Patch 33: wall_2F_4
+// Faces: 2
+// Patch 34: floor_2F
+// Faces: 12
+// Patch 35: ceil_2F
+// Faces: 12
+// Patch 36: stair_2F_1
+// Faces: 10
+// Patch 37: stair_2F_2
+// Faces: 10
 

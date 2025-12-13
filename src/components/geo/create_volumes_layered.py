@@ -554,10 +554,13 @@ def create_stair_tubes(patch_df: pd.DataFrame, stairs_config: List[Dict[str, Any
                       is_top_floor: bool = False) -> Tuple[pd.DataFrame, List[pv.PolyData]]:
     """
     Create stair tubes that extrude only by deck_thickness (not full floor height).
-    Stair tubes are created WITHOUT top/bottom caps to allow air circulation.
     
     ROBUST: Uses clipped stair polygons to match ceiling openings exactly.
-    SPECIAL: If is_top_floor=True, creates caps on top to close the geometry.
+    SPECIAL: If is_top_floor=True, adds ONLY top cap (bottom remains open to communicate with ceiling).
+    
+    Behavior:
+    - Normal floors: Tube open at both ends (air circulates between floors)
+    - Top floor: Tube with top cap only (bottom open to ceiling, top closed as no floor above)
     
     Args:
         patch_df: DataFrame with patch information
@@ -565,14 +568,14 @@ def create_stair_tubes(patch_df: pd.DataFrame, stairs_config: List[Dict[str, Any
         clipped_stair_polygons: List of clipped stair polygons from ceiling layer
         ceiling_height: Height of the ceiling
         deck_thickness: Thickness of the deck
-        is_top_floor: Whether this is the top floor (closes stair tubes on top)
+        is_top_floor: Whether this is the top floor (adds top cap only)
         
     Returns:
         Tuple of (updated patch_df, list of stair tube meshes)
     """
     if is_top_floor and stairs_config:
         logger.warning(f"    [PHASE 2.4] Creating stair tubes on TOP FLOOR ({len(stairs_config)} stairs)")
-        logger.warning(f"      ⚠️  Stairs on top floor will be CAPPED on top (no floor above)")
+        logger.warning(f"      ⚠️  Stairs will have TOP CAP (bottom open to ceiling)")
     else:
         logger.info(f"    [PHASE 2.4] Creating stair tubes ({len(stairs_config)} stairs)")
     
@@ -627,11 +630,20 @@ def create_stair_tubes(patch_df: pd.DataFrame, stairs_config: List[Dict[str, Any
         poly_mesh.clean(inplace=True)
         poly_filled = poly_mesh.triangulate_contours()
         
-        # ✅ NEW: If top floor, cap the tube on top to close geometry
-        # Otherwise, create open tube for air circulation between floors
+        # ✅ ALWAYS create open tube (no caps) for air circulation
         extrusion_height = deck_thickness + 2*VOLUMES_TOLERANCE
-        capping = is_top_floor  # Cap only if top floor
-        stair_tube = poly_filled.extrude([0, 0, extrusion_height], capping=capping)
+        stair_tube = poly_filled.extrude([0, 0, extrusion_height], capping=False)
+        
+        # ✅ If top floor, add ONLY top cap (bottom remains open to communicate with ceiling)
+        if is_top_floor:
+            # Create top cap from poly_filled (already clipped if needed)
+            top_cap = poly_filled.copy()
+            top_cap.translate([0, 0, extrusion_height], inplace=True)
+            
+            # Merge tube + top cap
+            stair_tube = pv.merge([stair_tube, top_cap])
+            logger.info(f"      → Top cap added (no floor above)")
+        
         stair_tube.compute_normals(inplace=True, auto_orient_normals=True, 
                                    consistent_normals=True, split_vertices=True, 
                                    point_normals=False)
@@ -643,14 +655,19 @@ def create_stair_tubes(patch_df: pd.DataFrame, stairs_config: List[Dict[str, Any
         stair_tube = optimize_mesh_memory(stair_tube)
         stair_tubes.append(stair_tube)
         
-        cap_status = "CAPPED on top" if is_top_floor else "OPEN ends"
+        # Updated logging
+        if is_top_floor:
+            cap_status = "TOP CAPPED (bottom open to ceiling)"
+        else:
+            cap_status = "BOTH ENDS OPEN (air circulates)"
+        
         logger.info(f"      ✓ Stair tube {idx}/{len(stairs_config)}: '{stair_id}' "
                    f"({stair_tube.n_cells} cells, extrusion: {extrusion_height:.3f}m, {cap_status})")
     
     if is_top_floor:
-        logger.info(f"    ✓ Stair tubes complete: {len(stair_tubes)} tubes created (CAPPED on top - no floor above)")
+        logger.info(f"    ✓ Stair tubes complete: {len(stair_tubes)} tubes (TOP CAPPED, bottom open)")
     else:
-        logger.info(f"    ✓ Stair tubes complete: {len(stair_tubes)} open tubes created (air can circulate)")
+        logger.info(f"    ✓ Stair tubes complete: {len(stair_tubes)} open tubes (air circulates)")
     return patch_df, stair_tubes
 
 
