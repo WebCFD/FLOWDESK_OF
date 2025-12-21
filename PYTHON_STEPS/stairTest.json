@@ -1,0 +1,244 @@
+{
+  "version": "1.0",
+  "levels": {
+    "0": {
+      "height": 2.2,
+      "deck": 0.35,
+      "ceiling": {
+        "temp": 20,
+        "airEntries": []
+      },
+      "floor": {
+        "temp": 20,
+        "airEntries": []
+      },
+      "walls": [
+        {
+          "id": "wall_0F_1",
+          "start": {
+            "x": -3.25,
+            "y": -2.4
+          },
+          "end": {
+            "x": 2.7,
+            "y": -2.4
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_2",
+          "start": {
+            "x": 2.7,
+            "y": -2.4
+          },
+          "end": {
+            "x": 2.7,
+            "y": 1.9
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_3",
+          "start": {
+            "x": 2.7,
+            "y": 1.9
+          },
+          "end": {
+            "x": -1.8,
+            "y": 1.9
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_4",
+          "start": {
+            "x": -1.8,
+            "y": 1.9
+          },
+          "end": {
+            "x": -1.85,
+            "y": -1.6
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_5",
+          "start": {
+            "x": -1.85,
+            "y": -1.6
+          },
+          "end": {
+            "x": -3.25,
+            "y": -1.6
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_6",
+          "start": {
+            "x": -3.25,
+            "y": -1.6
+          },
+          "end": {
+            "x": -3.25,
+            "y": -2.4
+          },
+          "temp": 20,
+          "airEntries": []
+        }
+      ],
+      "stairs": [
+        {
+          "id": "stair_0F_1",
+          "lines": [
+            {
+              "id": "stair_line_1",
+              "start": {
+                "x": 0.7,
+                "y": -2.05
+              },
+              "end": {
+                "x": 1.95,
+                "y": -2.05
+              }
+            },
+            {
+              "id": "stair_line_2",
+              "start": {
+                "x": 1.95,
+                "y": -2.05
+              },
+              "end": {
+                "x": 1.95,
+                "y": -1.15
+              }
+            },
+            {
+              "id": "stair_line_3",
+              "start": {
+                "x": 1.95,
+                "y": -1.15
+              },
+              "end": {
+                "x": 0.7,
+                "y": -1.15
+              }
+            },
+            {
+              "id": "stair_line_4",
+              "start": {
+                "x": 0.7,
+                "y": -1.15
+              },
+              "end": {
+                "x": 0.7,
+                "y": -2.05
+              }
+            }
+          ],
+          "temp": 20
+        },
+        {
+          "id": "stair_0F_2",
+          "lines": [
+            {
+              "id": "stair_line_5",
+              "start": {
+                "x": 0.7,
+                "y": 0.05
+              },
+              "end": {
+                "x": 1.5,
+                "y": -0.45
+              }
+            },
+            {
+              "id": "stair_line_6",
+              "start": {
+                "x": 1.5,
+                "y": -0.45
+              },
+              "end": {
+                "x": 1.95,
+                "y": 0.1
+              }
+            },
+            {
+              "id": "stair_line_7",
+              "start": {
+                "x": 1.95,
+                "y": 0.1
+              },
+              "end": {
+                "x": 0.7,
+                "y": 0.05
+              }
+            }
+          ],
+          "temp": 20
+        }
+      ],
+      "furniture": []
+    },
+    "1": {
+      "height": 2.2,
+      "deck": 0.35,
+      "ceiling": {
+        "temp": 20,
+        "airEntries": []
+      },
+      "floor": {
+        "temp": 20,
+        "airEntries": []
+      },
+      "walls": [
+        {
+          "id": "wall_1F_1",
+          "start": {
+            "x": -3.25,
+            "y": -2.4
+          },
+          "end": {
+            "x": 2.7,
+            "y": -2.4
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_1F_2",
+          "start": {
+            "x": 2.7,
+            "y": -2.4
+          },
+          "end": {
+            "x": 2.7,
+            "y": 1.9
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_1F_3",
+          "start": {
+            "x": 2.7,
+            "y": 1.9
+          },
+          "end": {
+            "x": -3.25,
+            "y": -2.4
+          },
+          "temp": 20,
+          "airEntries": []
+        }
+      ],
+      "stairs": [],
+      "furniture": []
+    }
+  }
+}

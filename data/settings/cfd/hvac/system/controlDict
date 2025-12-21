@@ -1,0 +1,40 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+
+application       buoyantSimpleFoam;
+startFrom         startTime;
+startTime         0;
+stopAt            endTime;
+endTime           3;
+deltaT            1;
+writeControl      timeStep;    // Write by iteration number
+writeInterval     1;            // Write every iteration
+adjustTimeStep    no;
+purgeWrite        0;            // Keep all timesteps (0 = no purge)
+writeFormat       ascii;
+writePrecision    6;
+writeCompression  off;
+timeFormat        general;
+timePrecision     6;
+runTimeModifiable true;         // Enable runtime modification for immediate writes
+
+functions
+{
+    // Write complete volume fields (OpenFOAM native format, readable by ParaView)
+    writeVTK
+    {
+        type            writeObjects;
+        libs            ("libutilityFunctionObjects.so");
+        
+        writeControl    timeStep;
+        writeInterval   1;
+        
+        objects         (T U p p_rgh h);
+        writeOption     anyWrite;
+    }
+}

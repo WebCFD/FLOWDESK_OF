@@ -1,0 +1,15 @@
+# REGLAS DE OPERACIÓN
+
+## Verificación obligatoria
+- Siempre lee archivos antes de modificarlos
+- Usa comandos para verificar información
+- NUNCA inventes sintaxis o parámetros
+
+## Respuestas concisas
+- Máximo 3 párrafos
+- Código directo, sin rodeos
+- Di "no sé" si no estás seguro
+
+## Prohibido
+- Inventar nombres de funciones/parámetros
+- Explicaciones genéricas sin base en archivos reales

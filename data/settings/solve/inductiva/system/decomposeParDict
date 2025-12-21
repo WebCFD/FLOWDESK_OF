@@ -1,0 +1,22 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      decomposeParDict;
+}
+
+numberOfSubdomains $NUM_CPUS;
+
+method          simple;
+
+simpleCoeffs
+{
+    n               ($PARTITION_X $PARTITION_Y $PARTITION_Z);
+    delta           0.001;
+}
+
+distributed     no;
+
+roots           ( );

@@ -1,0 +1,153 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.2.2                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      snappyHexMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+castellatedMesh true;
+snap            true;
+addLayers       $ENABLE_LAYERS;
+overwrite       true;
+
+geometry
+{
+    $STL_FILENAME
+    {
+        type triSurfaceMesh;
+        file $STL_FILENAME;
+                name geometry;
+        tolerance   1E-5;
+        maxTreeDepth 10;
+
+                $GEOMETRY_REGIONS
+    }
+};
+
+castellatedMeshControls
+{
+    maxLocalCells 200000;
+    maxGlobalCells 1000000;
+    minRefinementCells 0;  // CRITICAL - do not block refinement
+    maxLoadUnbalance 0.10;
+    nCellsBetweenLevels 3;
+
+
+    features
+    ( 
+        {
+            file $EMESH_FILENAME;
+                        levels ((0.002 2) (0.010 1));
+        }
+    );
+
+    refinementSurfaces
+    {
+                geometry
+                {
+                        level (0 0);  // Global base refinement - no extra refinement
+                        $REFINEMENT_SURFACES
+                }
+    }
+
+    resolveFeatureAngle 30;
+
+    refinementRegions
+    {
+$VOLUMETRIC_REFINEMENT
+    }
+
+    locationInMesh $LOCATION_INSIDE_MESH;
+    allowFreeStandingZoneFaces true;
+}
+
+snapControls
+{
+    nSmoothPatch 3;
+    tolerance 2.0;
+    nSolveIter 30;
+    nRelaxIter 5;
+
+        nFeatureSnapIter 10;
+        implicitFeatureSnap false;
+        explicitFeatureSnap true;
+        multiRegionFeatureSnap false;
+}
+
+addLayersControls
+{
+    relativeSizes false;  // Use absolute firstLayerThickness
+    
+    // Alignment-based boundary layer configuration
+    layers
+    {
+$BOUNDARY_LAYERS
+    }
+    
+    // GLOBAL FALLBACK PARAMETERS (required by OpenFOAM)
+    // Individual patches override these with their own values
+    expansionRatio 1.2;
+    firstLayerThickness 0.002;  // Fallback for patches without specific thickness
+    
+    // CRITICAL PARAMETERS for smooth transition from orthogonal layers to permissive volume
+    nGrow 0;
+    featureAngle 85;                  // PERMISSIVE - allow layers on more surfaces
+    slipFeatureAngle 30;
+    nRelaxIter 20;                    // INCREASED - more relaxation
+    nSmoothSurfaceNormals 5;
+    nSmoothNormals 10;
+    nSmoothThickness 40;              // CRITICAL - 40 not 20 for smooth transition
+    maxFaceThicknessRatio 0.95;       // VERY PERMISSIVE - allow thick layers
+    maxThicknessToMedialRatio 0.9;    // PERMISSIVE
+    minThickness 0.0005;              // Absolute minimum thickness
+    minMedialAxisAngle 85;
+    nBufferCellsNoExtrude 0;
+    nLayerIter 250;                   // INCREASED iterations for quality
+    nRelaxedIter 100;
+    
+    // Advanced settings for robust layer generation
+    additionalReporting true;
+    mergePatchFacesAngle 40;
+}
+
+meshQualityControls
+{
+    // PHILOSOPHY: Strict at boundaries, permissive in volume
+    // Layers near BC perfectly orthogonal, smooth transition to distorted volume
+    maxNonOrtho 85;               // PERMISSIVE in volume (was 60)
+    maxBoundarySkewness 15;       // STRICT at BC
+    maxInternalSkewness 6;        // PERMISSIVE in volume (was 3)
+    maxConcave 80;
+    minVol 1e-18;                 // Allow very small cells in layers
+    minTetQuality 1e-15;
+    minArea 1e-18;
+    minTwist 0.01;
+    minDeterminant 0.01;
+    minFaceWeight 0.01;
+    minVolRatio 0.005;
+    minTriangleTwist -1;
+
+    nSmoothScale 8;
+    errorReduction 0.75;
+
+    // Relaxed controls for difficult layer regions (MORE permissive than main)
+    relaxed
+    {
+        maxNonOrtho 95;           // +10 (was 70)
+        maxBoundarySkewness 25;   // +10 (was 20)
+        maxInternalSkewness 16;   // +10 (was 4)
+    }
+}
+
+debug 0;
+
+mergeTolerance 1e-6;

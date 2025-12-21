@@ -1,0 +1,96 @@
+{
+  "version": "1.0",
+  "levels": {
+    "0": {
+      "height": 2.2,
+      "deck": 0.35,
+      "ceiling": {
+        "temp": 20,
+        "airEntries": []
+      },
+      "floor": {
+        "temp": 20,
+        "airEntries": []
+      },
+      "walls": [
+        {
+          "id": "wall_0F_1",
+          "start": {
+            "x": -2.6,
+            "y": -0.95
+          },
+          "end": {
+            "x": 0.9,
+            "y": -1.05
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_2",
+          "start": {
+            "x": 0.9,
+            "y": -1.05
+          },
+          "end": {
+            "x": 0.9,
+            "y": 2.2
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_3",
+          "start": {
+            "x": 0.9,
+            "y": 2.2
+          },
+          "end": {
+            "x": -2.55,
+            "y": 2.3
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_4",
+          "start": {
+            "x": -2.55,
+            "y": 2.3
+          },
+          "end": {
+            "x": -2.6,
+            "y": -0.95
+          },
+          "temp": 20,
+          "airEntries": []
+        }
+      ],
+      "stairs": [],
+      "furniture": [
+        {
+          "id": "object_0F_person_1",
+          "position": {
+            "x": -0.7699962792436186,
+            "y": 1.237764644239637,
+            "z": 1.1368683772161603e-15
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "simulationProperties": {
+            "temperature": 20,
+            "emissivity": 0.9
+          }
+        }
+      ]
+    }
+  }
+}

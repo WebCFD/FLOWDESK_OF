@@ -1,0 +1,152 @@
+{
+  "case_name": "MySim",
+  "version": "1.0",
+  "levels": {
+    "0": {
+      "height": 2.2,
+      "deck": 0.35,
+      "ceiling": {
+        "temp": 20,
+        "airEntries": []
+      },
+      "floor": {
+        "temp": 20,
+        "airEntries": []
+      },
+      "walls": [
+        {
+          "id": "wall_0F_7",
+          "start": {
+            "x": 3.35,
+            "y": 2.25
+          },
+          "end": {
+            "x": -2.55,
+            "y": 2.25
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_10",
+          "start": {
+            "x": -2.55,
+            "y": -3.4
+          },
+          "end": {
+            "x": -0.05,
+            "y": -3.4
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_13",
+          "start": {
+            "x": -2.55,
+            "y": 2.25
+          },
+          "end": {
+            "x": -2.55,
+            "y": -3.4
+          },
+          "temp": 20,
+          "airEntries": [
+            {
+              "id": "window_0F_1",
+              "type": "window",
+              "position": {
+                "x": -2.55,
+                "y": -2.23585,
+                "z": 1.1,
+                "normal": {
+                  "x": -1,
+                  "y": 0,
+                  "z": 0
+                }
+              },
+              "dimensions": {
+                "width": 0.6,
+                "height": 0.4,
+                "shape": "rectangular"
+              },
+              "simulation": {
+                "state": "open",
+                "temperature": 20,
+                "airDirection": "inflow",
+                "flowIntensity": "medium"
+              }
+            }
+          ]
+        },
+        {
+          "id": "wall_0F_14",
+          "start": {
+            "x": -0.05,
+            "y": -3.4
+          },
+          "end": {
+            "x": -0.05,
+            "y": -0.45
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_15",
+          "start": {
+            "x": 3.35,
+            "y": -0.45
+          },
+          "end": {
+            "x": 3.35,
+            "y": 2.25
+          },
+          "temp": 20,
+          "airEntries": [
+            {
+              "id": "door_0F_1",
+              "type": "door",
+              "position": {
+                "x": 3.35,
+                "y": 0.33268,
+                "z": 1,
+                "normal": {
+                  "x": 1,
+                  "y": 0,
+                  "z": 0
+                }
+              },
+              "dimensions": {
+                "width": 0.8,
+                "height": 2,
+                "shape": "rectangular"
+              },
+              "simulation": {
+                "state": "open",
+                "temperature": 20,
+                "airDirection": "outflow",
+                "flowIntensity": "medium"
+              }
+            }
+          ]
+        },
+        {
+          "id": "wall_0F_16",
+          "start": {
+            "x": -0.05,
+            "y": -0.45
+          },
+          "end": {
+            "x": 3.35,
+            "y": -0.45
+          },
+          "temp": 20,
+          "airEntries": []
+        }
+      ],
+      "stairs": [],
+      "furniture": []
+    }
+  }
+}

@@ -1,0 +1,171 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      snappyHexMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// HVAC PROFESSIONAL MESH CONFIGURATION
+// Designed for accurate thermal comfort and air flow simulations
+// Target: High-quality mesh with optimal resolution at critical boundaries
+
+castellatedMesh true;
+snap            true;
+addLayers       $ADD_LAYERS;
+overwrite       true;
+
+geometry
+{
+    $STL_FILENAME
+    {
+        type triSurfaceMesh;
+        file $STL_FILENAME;
+        name geometry;
+        tolerance   1E-6;
+        maxTreeDepth 12;
+
+        $GEOMETRY_REGIONS
+    }
+
+    // Searchable surfaces for volumetric refinement
+$VOLUMETRIC_GEOMETRY
+};
+
+castellatedMeshControls
+{
+    // Cell limits (parametric per quality level)
+    maxLocalCells $MAX_LOCAL_CELLS;
+    maxGlobalCells $MAX_GLOBAL_CELLS;
+    minRefinementCells $MIN_REFINEMENT_CELLS;
+    maxLoadUnbalance $MAX_LOAD_UNBALANCE;
+    nCellsBetweenLevels $NCELLS_BETWEEN_LEVELS;
+
+    features
+    ( 
+        {
+            file $EMESH_FILENAME;
+$FEATURE_REFINEMENT_LEVELS
+        }
+    );
+
+    refinementSurfaces
+    {
+        geometry
+        {
+            level ($GLOBAL_LEVEL $GLOBAL_LEVEL);  // Global base refinement
+            $REFINEMENT_SURFACES
+        }
+    }
+
+    resolveFeatureAngle $FEATURE_ANGLE;  // Feature detection angle
+
+    // VOLUMETRIC REFINEMENT REGIONS
+    // Multi-zone refinement around pressure boundaries for jet capture
+    refinementRegions
+    {
+$VOLUMETRIC_REFINEMENT
+    }
+
+    locationInMesh $LOCATION_INSIDE_MESH;
+    allowFreeStandingZoneFaces true;
+}
+
+snapControls
+{
+    // High-quality surface snapping (optimized for rectangular BC patches)
+    nSmoothPatch 8;  // Maximum smoothing for BC orthogonality
+    tolerance 2.0;  // 2.0-2.5 for perfectly aligned rectangular geometry
+    nSolveIter 50;
+    nRelaxIter 8;
+
+    nFeatureSnapIter 15;
+    implicitFeatureSnap false;
+    explicitFeatureSnap true;
+    multiRegionFeatureSnap true;
+}
+
+addLayersControls
+{
+    relativeSizes $RELATIVE_SIZES;
+    
+    // BOUNDARY LAYER CONFIGURATION
+    // Optimized for HVAC: high coverage, smooth growth
+    layers
+    {
+$BOUNDARY_LAYERS
+    }
+    
+    // GLOBAL FALLBACK PARAMETERS (required by OpenFOAM)
+    // Individual patches override these with their own values
+    expansionRatio $GLOBAL_EXPANSION_RATIO;
+    firstLayerThickness $GLOBAL_FIRST_LAYER_THICKNESS;
+    
+    // Advanced layer generation for maximum coverage
+    nGrow 0;
+    featureAngle $LAYER_FEATURE_ANGLE;
+    slipFeatureAngle 30;
+    nRelaxIter $LAYER_N_RELAX_ITER;
+    nSmoothSurfaceNormals 5;
+    nSmoothNormals $LAYER_N_SMOOTH_NORMALS;
+    nSmoothThickness 40;              // CRITICAL - 40 not 20 for smooth transition
+    maxFaceThicknessRatio $LAYER_MAX_FACE_THICKNESS_RATIO;
+    maxThicknessToMedialRatio $LAYER_MAX_THICKNESS_TO_MEDIAL_RATIO;
+    minThickness $LAYER_MIN_THICKNESS;
+    minMedialAxisAngle $LAYER_MIN_MEDIAL_AXIS_ANGLE;
+    nBufferCellsNoExtrude 0;
+    nLayerIter $LAYER_N_LAYER_ITER;
+    nRelaxedIter $LAYER_N_RELAXED_ITER;
+    
+    // Quality enforcement during layer addition
+    additionalReporting true;
+    mergePatchFacesAngle 40;
+}
+
+meshQualityControls
+{
+    // QUALITY CONTROLS FOR CFD (parametric per quality level)
+    
+    maxNonOrtho $MAX_NON_ORTHO;
+    maxBoundarySkewness $MAX_BOUNDARY_SKEWNESS;
+    maxInternalSkewness $MAX_INTERNAL_SKEWNESS;
+    maxConcave $MAX_CONCAVE;
+    minVol 1e-18;                // Allow very small cells in layers
+    minTetQuality 1e-15;
+    minArea 1e-18;
+    minTwist 0.01;
+    minDeterminant 0.01;
+    minFaceWeight 0.01;
+    minVolRatio 0.005;
+    minTriangleTwist -1;
+
+    nSmoothScale 8;
+    errorReduction 0.75;
+
+    // Relaxed controls for difficult layer regions (MORE permissive than main)
+    relaxed
+    {
+        maxNonOrtho $MAX_NON_ORTHO_RELAXED;
+        maxBoundarySkewness $MAX_BOUNDARY_SKEWNESS_RELAXED;
+        maxInternalSkewness $MAX_INTERNAL_SKEWNESS_RELAXED;
+    }
+}
+
+writeFlags
+(
+    scalarLevels
+    layerSets
+    layerFields
+);
+
+debug 0;
+mergeTolerance 1e-6;
+
+// ************************************************************************* //

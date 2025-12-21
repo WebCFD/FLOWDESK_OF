@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+PYTHON_STEPS/outputs/
+
+# IDE
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
+*.log
+*.stlcases/*/sim/constant/polyMesh/faces
+cases/*/sim/constant/polyMesh/points
+cases/*/sim/VTK/
+cases/*/sim/constant/polyMesh/owner
+cases/*/sim/constant/polyMesh/neighbour
