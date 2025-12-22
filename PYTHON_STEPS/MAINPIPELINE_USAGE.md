@@ -151,7 +151,7 @@ ls -la /home/plprm/FLOWDESK_OF/PYTHON_STEPS/*.json
 En modo `mesh-only` o `full`, se requiere OpenFOAM. Cargar manualmente:
 
 ```bash
-source /home/plprm/OpenFOAM/OpenFOAM-v2012/etc/bashrc
+source /usr/lib/openfoam/openfoam2412/etc/bashrc
 ```
 
 ### Error: "cfMesh NO generó polyMesh"

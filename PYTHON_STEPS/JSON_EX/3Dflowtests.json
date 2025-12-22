@@ -1,0 +1,148 @@
+{
+  "version": "1.0",
+  "levels": {
+    "0": {
+      "height": 2.2,
+      "deck": 0.35,
+      "ceiling": {
+        "temp": 20,
+        "airEntries": []
+      },
+      "floor": {
+        "temp": 20,
+        "airEntries": []
+      },
+      "walls": [
+        {
+          "id": "wall_0F_5",
+          "start": {
+            "x": -2,
+            "y": 1.5
+          },
+          "end": {
+            "x": -2,
+            "y": -1.5
+          },
+          "temp": 20,
+          "airEntries": [
+            {
+              "id": "window_0F_1",
+              "type": "window",
+              "position": {
+                "x": -2,
+                "y": 0,
+                "z": 1.1,
+                "normal": {
+                  "x": -1,
+                  "y": 0,
+                  "z": 0
+                }
+              },
+              "dimensions": {
+                "width": 0.6,
+                "height": 0.4,
+                "shape": "rectangular"
+              },
+              "simulation": {
+                "state": "open",
+                "temperature": 20,
+                "airDirection": "outflow",
+                "flowIntensity": "medium"
+              }
+            }
+          ]
+        },
+        {
+          "id": "wall_0F_7",
+          "start": {
+            "x": 2,
+            "y": 1.5
+          },
+          "end": {
+            "x": -2,
+            "y": 1.5
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_8",
+          "start": {
+            "x": -2,
+            "y": -1.5
+          },
+          "end": {
+            "x": 2,
+            "y": -1.5
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_9",
+          "start": {
+            "x": 2,
+            "y": -1.5
+          },
+          "end": {
+            "x": 2,
+            "y": 1.5
+          },
+          "temp": 20,
+          "airEntries": [
+            {
+              "id": "window_0F_2",
+              "type": "window",
+              "position": {
+                "x": 2,
+                "y": -0.03769,
+                "z": 1.1,
+                "normal": {
+                  "x": 1,
+                  "y": 0,
+                  "z": 0
+                }
+              },
+              "dimensions": {
+                "width": 0.6,
+                "height": 0.4,
+                "shape": "rectangular"
+              },
+              "simulation": {
+                "state": "open",
+                "temperature": 20,
+                "airDirection": "inflow",
+                "flowIntensity": "medium"
+              }
+            }
+          ]
+        }
+      ],
+      "stairs": [],
+      "furniture": [
+        {
+          "id": "object_0F_person_1",
+          "position": {
+            "x": 0.33990000000000004,
+            "y": 0.2957,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "simulationProperties": {
+            "temperature": 20,
+            "emissivity": 0.9
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,156 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+
+application       buoyantPimpleFoam;
+
+startFrom         startTime;
+
+startTime         0;
+
+stopAt            endTime;
+
+endTime           100;  // 100 seconds of physical time
+
+deltaT            0.01; // Initial timestep 0.01s (will be adjusted by CFL control)
+
+writeControl      timeStep;
+
+writeInterval     20;   // Write every 20 timesteps (comfortTest default)
+
+purgeWrite        0;    // Keep all timesteps (0 = no purge)
+
+writeFormat       ascii;
+
+writePrecision    8;
+
+writeCompression  off;
+
+timeFormat        general;
+
+timePrecision     6;
+
+runTimeModifiable true;
+
+// Adaptive timestep control based on CFL number
+adjustTimeStep    yes;
+
+maxCo             0.5;   // Target maximum Courant number
+
+maxAlphaCo        0.5;   // For multiphase (not used here, but required by solver)
+
+maxDeltaT         0.1;   // Maximum timestep allowed (prevent too large jumps)
+
+// Progressive CFL ramp: start conservative, increase gradually
+// This is handled by maxCo and initial deltaT
+
+functions
+{
+    // Field averaging for statistical steady-state
+    fieldAverage1
+    {
+        type            fieldAverage;
+        libs            ("libfieldFunctionObjects.so");
+        writeControl    writeTime;
+        
+        fields
+        (
+            U
+            {
+                mean        on;
+                prime2Mean  off;
+                base        time;
+            }
+            T
+            {
+                mean        on;
+                prime2Mean  off;
+                base        time;
+            }
+            p
+            {
+                mean        on;
+                prime2Mean  off;
+                base        time;
+            }
+            k
+            {
+                mean        on;
+                prime2Mean  off;
+                base        time;
+            }
+            omega
+            {
+                mean        on;
+                prime2Mean  off;
+                base        time;
+            }
+        );
+    }
+
+    // Probes for monitoring at specific locations
+    probes1
+    {
+        type            probes;
+        libs            ("libsampling.so");
+        writeControl    timeStep;
+        writeInterval   1;
+        
+        fields
+        (
+            U
+            T
+            p
+            k
+            omega
+        );
+        
+        probeLocations
+        (
+            // Define probe locations in case-specific setup
+            // Example: (1.5 1.5 1.0)  // center of room at head height
+        );
+    }
+
+    // Scalar transport for CO2 (passive scalar)
+    scalarTransport_CO2
+    {
+        type            scalarTransport;
+        libs            ("libsolverFunctionObjects.so");
+        
+        field           CO2;
+        
+        writeControl    writeTime;
+        
+        // Phase name (not used for single phase, but required)
+        phase           none;
+        
+        // Diffusivity D = 1.6e-5 m²/s for CO2 in air at 20°C
+        D               1.6e-5;
+        
+        // Reset on start
+        resetOnStartUp  false;
+    }
+
+    // Residuals monitoring
+    residuals
+    {
+        type            residuals;
+        libs            ("libutilityFunctionObjects.so");
+        writeControl    timeStep;
+        writeInterval   1;
+        
+        fields
+        (
+            U
+            p_rgh
+            h
+            k
+            omega
+        );
+    }
+}

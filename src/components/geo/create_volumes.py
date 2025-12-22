@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pyvista as pv
 import logging
+from pathlib import Path
 
 from typing import List, Tuple, Dict, Any
 from src.components.tools.performance import (
@@ -12,6 +13,10 @@ from src.components.tools.performance import (
 )
 
 logger = logging.getLogger(__name__)
+
+# PROJECT_ROOT: Absolute path to project root (3 levels up from this file)
+# This ensures correct paths regardless of execution directory
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 
 VOLUMES_TOLERANCE = 1e-5
 DEFAULT_TEMPERATURE = 20
@@ -241,7 +246,7 @@ def create_furniture_mesh(patch_df: pd.DataFrame, data: Dict[str, Any]) -> Tuple
             mesh_id = 11
         
         mesh_path_info = ELEMENTS_MESHES[mesh_id]
-        mesh_path = os.path.join(os.getcwd(), 'data', 'CAD_database', mesh_path_info[1], mesh_path_info[0] + '.stl')
+        mesh_path = PROJECT_ROOT / 'data' / 'CAD_database' / mesh_path_info[1] / f"{mesh_path_info[0]}.stl"
         
         logger.info(f"      → Loading STL: {mesh_path_info[0]} from {mesh_path_info[1]}")
         

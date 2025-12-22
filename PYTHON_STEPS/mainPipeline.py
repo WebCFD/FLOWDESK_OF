@@ -59,12 +59,12 @@ def setup_openfoam_environment():
     
     print("⚠️  OpenFOAM environment NOT loaded. Attempting to load...")
     
-    # Rutas comunes de OpenFOAM
+    # Rutas comunes de OpenFOAM (v2412)
     of_paths = [
-        "/home/plprm/OpenFOAM/OpenFOAM-v2012/etc/bashrc",
-        "/opt/openfoam/etc/bashrc",
+        "/usr/lib/openfoam/openfoam2412/etc/bashrc",
+        "/opt/openfoam/openfoam2412/etc/bashrc",
+        os.path.expanduser("~/OpenFOAM/openfoam2412/etc/bashrc"),
         "/usr/lib/openfoam/etc/bashrc",
-        os.path.expanduser("~/OpenFOAM/OpenFOAM-v2012/etc/bashrc"),
     ]
     
     # Buscar bashrc de OpenFOAM
@@ -402,12 +402,13 @@ def main():
     try:
         log_print("🔄 Ejecutando STEP 03...")
         
-        # Ejecutar step03
+        # Ejecutar step03 con transient=True por defecto (buoyantPimpleFoam)
         step03_run(
             case_name=case_name,
             type="hvac",
             mesh_script=mesh_script_commands,
-            simulation_type="comfortTest"
+            simulation_type="comfortTest",
+            transient=True
         )
         
         # Validar output
@@ -510,7 +511,7 @@ def main():
                     import subprocess
                     # Ejecutar Allrun con OpenFOAM environment cargado correctamente
                     # Usar bash -c para asegurar que source se ejecuta en el mismo shell
-                    cmd = f"bash -c 'source /home/plprm/OpenFOAM/OpenFOAM-v2012/etc/bashrc && cd {sim_path} && ./Allrun'"
+                    cmd = f"bash -c 'source /usr/lib/openfoam/openfoam2412/etc/bashrc && cd {sim_path} && ./Allrun'"
                     result = subprocess.run(cmd, shell=True, capture_output=True, text=True, executable="/bin/bash", encoding='utf-8', errors='replace')
                     
                     # Verificar que se generó polyMesh

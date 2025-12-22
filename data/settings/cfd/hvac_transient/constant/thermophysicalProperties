@@ -1,0 +1,42 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      thermophysicalProperties;
+}
+
+thermoType
+{
+    type            heRhoThermo;
+    mixture         pureMixture;
+    transport       const;
+    thermo          hConst;
+    equationOfState incompressiblePerfectGas;
+    specie          specie;
+    energy          sensibleEnthalpy;
+}
+
+mixture
+{
+    specie
+    {
+        molWeight       28.9;
+    }
+    thermodynamics
+    {
+        Cp              1005;   // Specific heat at constant pressure [J/(kg·K)]
+        Hf              0;      // Formation enthalpy [J/kg]
+        Tlow            200;    // Lower temperature limit [K] ~-73°C (HVAC safety)
+        Thigh           400;    // Upper temperature limit [K] ~127°C (above max HVAC)
+    }
+    equationOfState
+    {
+        pRef            101325; // Reference pressure [Pa] for Boussinesq
+    }
+    transport
+    {
+        mu              1.81e-05;
+        Pr              0.7;
+    }
+}

@@ -1,0 +1,84 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      fvOptions;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+/*
+// Volumetric heat source from occupants
+occupantHeat
+{
+    type            scalarSemiImplicitSource;
+    
+    active          no;  // Disabled - no occupant cellZone defined yet
+    
+    selectionMode   cellZone;
+    cellZone        occupants;  // Defined in topoSetDict
+    
+    volumeMode      absolute;  // Total power in W
+    
+    sources
+    {
+        h
+        {
+            explicit    100;  // 100 W heat per occupant
+            implicit    0;
+        }
+    }
+}
+
+// Volumetric CO2 source from occupants
+occupantCO2
+{
+    type            scalarSemiImplicitSource;
+    
+    active          no;  // Disabled by default, enable in case-specific setup
+    
+    selectionMode   cellZone;
+    cellZone        occupants;  // Defined in topoSetDict
+    
+    volumeMode      absolute;  // Total CO2 generation rate
+    
+    sources
+    {
+        CO2
+        {
+            explicit    0.005;  // 0.005 kg/s CO2 per occupant
+            implicit    0;
+        }
+    }
+}
+
+// Equipment heat source (optional)
+equipmentHeat
+{
+    type            scalarSemiImplicitSource;
+    
+    active          no;  // Disabled by default, enable in case-specific setup
+    
+    selectionMode   cellZone;
+    cellZone        equipment;  // Defined in topoSetDict
+    
+    volumeMode      absolute;  // Total power in W
+    
+    sources
+    {
+        h
+        {
+            explicit    50;  // 50 W heat per equipment item
+            implicit    0;
+        }
+    }
+}
+*/
+// ************************************************************************* //

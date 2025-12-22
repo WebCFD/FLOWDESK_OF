@@ -1,0 +1,204 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      setFieldsDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// ============================================================================
+// IMPORTANT: This file is OPTIONAL and typically NOT needed
+// ============================================================================
+//
+// TRANSIENT (buoyantPimpleFoam):
+//   → NOT NEEDED. Initialize p_rgh=0 uniform in 0/p_rgh
+//   → Solver establishes correct fields naturally in 2-3 timesteps
+//   → Unnecessary initialization can cause oscillations
+//
+// STEADY-STATE (buoyantSimpleFoam):
+//   → OPTIONAL. Can help convergence if you have:
+//     - Large temperature stratification (ΔT > 20K vertically)
+//     - Tall domains (>10m) with strong buoyancy
+//     - Multiple zones with very different initial conditions
+//   → For most HVAC cases (rooms <5m), uniform initialization is fine
+//
+// NOTE: buoyant solvers use p_rgh (dynamic pressure), NOT p (total pressure)
+//       Relation: p = p_rgh + ρ*g*h
+//       For hydrostatic equilibrium: p_rgh should be UNIFORM (constant)
+//
+// Execute with: setFields (after blockMesh, before solver)
+// ============================================================================
+
+
+// ============================================================================
+// DEFAULT: Uniform initialization (recommended for most cases)
+// ============================================================================
+
+defaultFieldValues
+(
+    volScalarFieldValue p_rgh   0;       // Dynamic pressure = 0
+    volScalarFieldValue T       293;     // 20°C uniform
+    volVectorFieldValue U       (0 0 0); // Still air
+);
+
+regions
+(
+    // No regions defined = uniform fields everywhere
+    // This is the recommended starting point
+);
+
+
+// ============================================================================
+// ADVANCED: Temperature stratification for tall domains (UNCOMMENT IF NEEDED)
+// Use for: Atriums, warehouses, tall datacenters with strong stratification
+// ============================================================================
+
+// defaultFieldValues
+// (
+//     volScalarFieldValue p_rgh   0;       // p_rgh ALWAYS uniform!
+//     volScalarFieldValue T       293;     // Default 20°C
+//     volVectorFieldValue U       (0 0 0);
+// );
+//
+// regions
+// (
+//     // Ground floor (0-2m): Cool air, 18°C
+//     boxToCell
+//     {
+//         box (-1000 -1000 0.0) (1000 1000 2.0);
+//         fieldValues
+//         (
+//             volScalarFieldValue T 291;  // 18°C
+//         );
+//     }
+//
+//     // Mid-height (2-5m): Intermediate, 22°C
+//     boxToCell
+//     {
+//         box (-1000 -1000 2.0) (1000 1000 5.0);
+//         fieldValues
+//         (
+//             volScalarFieldValue T 295;  // 22°C
+//         );
+//     }
+//
+//     // Ceiling (5-8m): Hot air accumulation, 28°C
+//     boxToCell
+//     {
+//         box (-1000 -1000 5.0) (1000 1000 8.0);
+//         fieldValues
+//         (
+//             volScalarFieldValue T 301;  // 28°C
+//         );
+//     }
+// );
+
+
+// ============================================================================
+// ADVANCED: Multiple zones with different conditions (UNCOMMENT IF NEEDED)
+// Use for: Cold room adjacent to warm room, datacenter hot/cold aisles
+// ============================================================================
+
+// defaultFieldValues
+// (
+//     volScalarFieldValue p_rgh   0;
+//     volScalarFieldValue T       293;
+//     volVectorFieldValue U       (0 0 0);
+// );
+//
+// regions
+// (
+//     // Cold room (e.g., refrigerated chamber at 5°C)
+//     boxToCell
+//     {
+//         box (0.0 0.0 0.0) (3.0 3.0 2.5);
+//         fieldValues
+//         (
+//             volScalarFieldValue T 278;  // 5°C
+//         );
+//     }
+//
+//     // Hot aisle (datacenter, 35°C)
+//     boxToCell
+//     {
+//         box (5.0 0.0 0.0) (8.0 10.0 2.5);
+//         fieldValues
+//         (
+//             volScalarFieldValue T 308;  // 35°C
+//         );
+//     }
+//
+//     // Cold aisle (datacenter, 18°C)
+//     boxToCell
+//     {
+//         box (8.0 0.0 0.0) (11.0 10.0 2.5);
+//         fieldValues
+//         (
+//             volScalarFieldValue T 291;  // 18°C
+//         );
+//     }
+// );
+
+
+// ============================================================================
+// ADVANCED: Initial velocity field (UNCOMMENT IF NEEDED)
+// Use for: Pre-conditioning flow patterns, reducing initial transients
+// ============================================================================
+
+// defaultFieldValues
+// (
+//     volScalarFieldValue p_rgh   0;
+//     volScalarFieldValue T       293;
+//     volVectorFieldValue U       (0 0 0);
+// );
+//
+// regions
+// (
+//     // Inlet region with expected flow direction
+//     boxToCell
+//     {
+//         box (0.0 0.0 0.0) (0.5 5.0 2.5);
+//         fieldValues
+//         (
+//             volVectorFieldValue U (0.3 0 0);  // 0.3 m/s in X direction
+//         );
+//     }
+// );
+
+
+// ============================================================================
+// CRITICAL NOTES
+// ============================================================================
+//
+// 1. p_rgh initialization:
+//    - MUST be uniform (constant) for hydrostatic equilibrium
+//    - Typical values: 0 or p_atm (101325 Pa)
+//    - DO NOT create vertical stratification in p_rgh!
+//
+// 2. Temperature initialization:
+//    - Can be stratified if you expect it (tall spaces, known conditions)
+//    - For unknown cases, use uniform T and let solver evolve naturally
+//
+// 3. Velocity initialization:
+//    - Usually (0 0 0) is best
+//    - Small initial velocities (0.01-0.1 m/s) can help if you know flow pattern
+//    - Avoid large velocities - causes initial shocks
+//
+// 4. When to use setFields:
+//    STEADY-STATE: Can help convergence for complex stratification
+//    TRANSIENT: Usually NOT needed - solver handles initialization naturally
+//
+// 5. Alternative for TRANSIENT:
+//    - Run short steady-state (50-100 iterations) with buoyantSimpleFoam
+//    - Use result as initial condition for buoyantPimpleFoam
+//    - Copy: cp -r <latestTime> 0/
+//
+// ************************************************************************* //
