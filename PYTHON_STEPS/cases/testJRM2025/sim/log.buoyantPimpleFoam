@@ -1,0 +1,489 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _f00230df-20250528 OPENFOAM=2412 patch=250528 version=2412
+Arch   : "LSB;label=32;scalar=64"
+Exec   : buoyantPimpleFoam -parallel -parallel
+Date   : Jan 09 2026
+Time   : 22:47:05
+Host   : plprm-HPEliteDesk
+PID    : 19588
+I/O    : uncollated
+Case   : /home/plprm/FLOWDESK_OF/PYTHON_STEPS/cases/testJRM2025/sim
+nProcs : 3
+Hosts  :
+(
+    (plprm-HPEliteDesk 3)
+)
+Pstream initialized with:
+    floatTransfer      : false
+    maxCommsSize       : 0
+    nProcsSimpleSum    : 0
+    nonBlockingExchange: 0 (tuning: 0)
+    exchange algorithm : 0
+    commsType          : nonBlocking
+    polling iterations : 0
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Create mesh for time = 0
+
+
+PIMPLE: no residual control data found. Calculations will employ 5 corrector loops
+
+Reading thermophysical properties
+
+Selecting thermodynamics package 
+{
+    type            heRhoThermo;
+    mixture         pureMixture;
+    transport       const;
+    thermo          hConst;
+    equationOfState incompressiblePerfectGas;
+    specie          specie;
+    energy          sensibleEnthalpy;
+}
+
+Reading field U
+
+Reading/calculating face flux field phi
+
+Creating turbulence model
+
+Selecting turbulence model type RAS
+Selecting RAS turbulence model kOmegaSST
+Selecting patchDistMethod meshWave
+RAS
+{
+    RASModel        kOmegaSST;
+    turbulence      on;
+    printCoeffs     on;
+    alphaK1         0.85;
+    alphaK2         1;
+    alphaOmega1     0.5;
+    alphaOmega2     0.856;
+    gamma1          0.55555556;
+    gamma2          0.44;
+    beta1           0.075;
+    beta2           0.0828;
+    betaStar        0.09;
+    a1              0.31;
+    b1              1;
+    c1              10;
+    F3              false;
+    decayControl    false;
+    kInf            0;
+    omegaInf        0;
+}
+
+
+Reading g
+
+Reading hRef
+Calculating field g.h
+
+Reading field p_rgh
+
+Creating field dpdt
+
+Creating field kinetic energy K
+
+No MRF models present
+
+Selecting radiationModel none
+Creating finite volume options from "system/fvOptions"
+
+No finite volume options present
+Courant Number mean: 0 max: 0
+
+Starting time loop
+
+fieldAverage fieldAverage1:
+    Restarting averaging for fields:
+        U: starting averaging at time 0
+        T: starting averaging at time 0
+        p: starting averaging at time 0
+        k: starting averaging at time 0
+        omega: starting averaging at time 0
+
+--> FOAM Warning : 
+Unknown function type residuals
+
+Valid function types :
+
+120
+(
+AMIWeights
+BilgerMixtureFraction
+CourantNo
+Curle
+DESModelRegions
+DMD
+LambVector
+Lambda2
+MachNo
+ObukhovLength
+PecletNo
+Q
+XiReactionRate
+abort
+add
+age
+areaWrite
+binField
+blendingFactor
+caseInfo
+cellDecomposer
+coded
+columnAverage
+comfort
+components
+continuityError
+ddt
+ddt2
+derivedFields
+div
+electricPotential
+energyTransport
+ensightWrite
+enstrophy
+exprField
+externalCoupled
+extractEulerianParticles
+fieldAverage
+fieldCoordinateSystemTransform
+fieldExtents
+fieldMinMax
+flowType
+flux
+fluxSummary
+foamReport
+grad
+graphFunctionObject
+heatTransferCoeff
+histogram
+interfaceHeight
+limitFields
+log
+mag
+magSqr
+mapFields
+momentum
+momentumError
+multiFieldValue
+multiRegion
+multiphaseInterHtcModel
+multiply
+nearWallFields
+norm
+parProfiling
+particleDistribution
+patchProbes
+pow
+pressure
+probes
+processorField
+proudmanAcousticPower
+psiReactionThermoMoleFractions
+psiReactionsSensitivityAnalysis
+psiSpecieReactionRates
+randomise
+reactingEulerHtcModel
+readFields
+reference
+regionSizeDistribution
+removeRegisteredObject
+resolutionIndex
+rhoReactionThermoMoleFractions
+rhoReactionsSensitivityAnalysis
+rhoSpecieReactionRates
+runTimeControl
+scalarTransport
+setFlow
+setTimeStep
+setTimeStepFaRegion
+sets
+solverInfo
+stabilityBlendingFactor
+streamFunction
+streamLine
+subtract
+surfaceCourantNumber
+surfaceDistance
+surfaceFieldValue
+surfaceInterpolate
+surfaces
+syncObjects
+systemCall
+thermoCoupleProbes
+timeActivatedFileUpdate
+timeInfo
+turbulenceFields
+valueAverage
+viewFactorHeatFlux
+volFieldValue
+vorticity
+vtkWrite
+wallBoundedStreamLine
+wallHeatFlux
+wallShearStress
+writeCellCentres
+writeCellVolumes
+writeDictionary
+writeObjects
+yPlus
+zeroGradient
+)
+
+
+
+    From static Foam::autoPtr<Foam::functionObject> Foam::functionObject::New(const Foam::word&, const Foam::Time&, const Foam::dictionary&)
+    in file db/functionObjects/functionObject/functionObject.C at line 129.
+--> loading function object 'residuals'
+
+Courant Number mean: 0 max: 0
+deltaT = 0.012
+Time = 0.012
+
+PIMPLE: iteration 1
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+DILUPBiCGStab:  Solving for Ux, Initial residual = 1, Final residual = 0.0035353396, No Iterations 1
+DILUPBiCGStab:  Solving for Uy, Initial residual = 1, Final residual = 0.0031680741, No Iterations 1
+DILUPBiCGStab:  Solving for Uz, Initial residual = 1, Final residual = 0.0029895217, No Iterations 1
+DILUPBiCGStab:  Solving for h, Initial residual = 1, Final residual = 0.0029533033, No Iterations 1
+GAMG:  Solving for p_rgh, Initial residual = 0.99392544, Final residual = 0.0047264864, No Iterations 5
+GAMG:  Solving for p_rgh, Initial residual = 0.035860707, Final residual = 0.0002775422, No Iterations 6
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 6.9808219e-07, global = -7.8340247e-09, cumulative = -7.8340247e-09
+GAMG:  Solving for p_rgh, Initial residual = 0.95881742, Final residual = 0.0044569203, No Iterations 5
+GAMG:  Solving for p_rgh, Initial residual = 0.032605966, Final residual = 8.6942043e-08, No Iterations 19
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 1.6314709e-10, global = -1.6762965e-12, cumulative = -7.835701e-09
+PIMPLE: iteration 2
+DILUPBiCGStab:  Solving for Ux, Initial residual = 0.25173629, Final residual = 0.0010237108, No Iterations 1
+DILUPBiCGStab:  Solving for Uy, Initial residual = 0.22018895, Final residual = 0.00076268436, No Iterations 1
+DILUPBiCGStab:  Solving for Uz, Initial residual = 0.22404444, Final residual = 0.00066972962, No Iterations 1
+DILUPBiCGStab:  Solving for h, Initial residual = 0.98097156, Final residual = 0.0029118321, No Iterations 1
+GAMG:  Solving for p_rgh, Initial residual = 0.97559347, Final residual = 0.005216086, No Iterations 5
+GAMG:  Solving for p_rgh, Initial residual = 0.010247453, Final residual = 5.6149572e-05, No Iterations 6
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 5.0380327e-07, global = -1.394946e-09, cumulative = -9.230647e-09
+GAMG:  Solving for p_rgh, Initial residual = 0.8613716, Final residual = 0.0045095618, No Iterations 5
+GAMG:  Solving for p_rgh, Initial residual = 0.007489887, Final residual = 7.1041182e-08, No Iterations 18
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 5.9436402e-10, global = -8.8189716e-12, cumulative = -9.239466e-09
+PIMPLE: iteration 3
+DILUPBiCGStab:  Solving for Ux, Initial residual = 0.17865644, Final residual = 0.00048675798, No Iterations 1
+DILUPBiCGStab:  Solving for Uy, Initial residual = 0.15103066, Final residual = 0.00039455407, No Iterations 1
+DILUPBiCGStab:  Solving for Uz, Initial residual = 0.027503705, Final residual = 8.5502799e-05, No Iterations 1
+DILUPBiCGStab:  Solving for h, Initial residual = 0.44182408, Final residual = 0.0013006593, No Iterations 1
+GAMG:  Solving for p_rgh, Initial residual = 0.87750679, Final residual = 0.0045931984, No Iterations 5
+GAMG:  Solving for p_rgh, Initial residual = 0.007207412, Final residual = 3.8137175e-05, No Iterations 6
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 3.4690349e-07, global = -3.6791303e-09, cumulative = -1.2918596e-08
+GAMG:  Solving for p_rgh, Initial residual = 0.75584919, Final residual = 0.0038445865, No Iterations 5
+GAMG:  Solving for p_rgh, Initial residual = 0.0051051394, Final residual = 7.3075973e-08, No Iterations 17
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 6.3652554e-10, global = -5.3658934e-12, cumulative = -1.2923962e-08
+PIMPLE: iteration 4
+DILUPBiCGStab:  Solving for Ux, Initial residual = 0.13577602, Final residual = 0.0004049498, No Iterations 1
+DILUPBiCGStab:  Solving for Uy, Initial residual = 0.13122277, Final residual = 0.00039800191, No Iterations 1
+DILUPBiCGStab:  Solving for Uz, Initial residual = 0.095629556, Final residual = 0.00028933372, No Iterations 1
+DILUPBiCGStab:  Solving for h, Initial residual = 0.23990627, Final residual = 0.00070777464, No Iterations 1
+GAMG:  Solving for p_rgh, Initial residual = 0.74232143, Final residual = 0.0032681201, No Iterations 5
+GAMG:  Solving for p_rgh, Initial residual = 0.004909036, Final residual = 3.0807457e-05, No Iterations 6
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 2.215233e-07, global = -2.3114019e-09, cumulative = -1.5235364e-08
+GAMG:  Solving for p_rgh, Initial residual = 0.63009421, Final residual = 0.0026959418, No Iterations 5
+GAMG:  Solving for p_rgh, Initial residual = 0.0034255566, Final residual = 5.9592867e-08, No Iterations 16
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 4.1645296e-10, global = -9.710521e-12, cumulative = -1.5245075e-08
+PIMPLE: iteration 5
+DILUPBiCGStab:  Solving for Ux, Initial residual = 0.20326246, Final residual = 6.8224395e-08, No Iterations 3
+DILUPBiCGStab:  Solving for Uy, Initial residual = 0.22263366, Final residual = 7.0792965e-08, No Iterations 3
+DILUPBiCGStab:  Solving for Uz, Initial residual = 0.53333698, Final residual = 8.8733052e-09, No Iterations 4
+DILUPBiCGStab:  Solving for h, Initial residual = 0.27126131, Final residual = 2.8987685e-08, No Iterations 3
+GAMG:  Solving for p_rgh, Initial residual = 0.91363004, Final residual = 0.0064368836, No Iterations 3
+GAMG:  Solving for p_rgh, Initial residual = 0.044944084, Final residual = 0.00037894139, No Iterations 7
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 4.7960007e-07, global = 4.6079686e-09, cumulative = -1.0637106e-08
+GAMG:  Solving for p_rgh, Initial residual = 0.29852162, Final residual = 0.0024270323, No Iterations 4
+GAMG:  Solving for p_rgh, Initial residual = 0.0046281785, Final residual = 7.6156294e-08, No Iterations 17
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 5.3450765e-11, global = 6.8546549e-13, cumulative = -1.0636421e-08
+DILUPBiCGStab:  Solving for omega, Initial residual = 0.012067222, Final residual = 8.1576534e-08, No Iterations 2
+DILUPBiCGStab:  Solving for k, Initial residual = 1, Final residual = 1.4569729e-08, No Iterations 4
+ExecutionTime = 7.42 s  ClockTime = 7 s
+
+fieldAverage fieldAverage1:
+    Reading/initialising field UMean
+    Reading/initialising field TMean
+    Reading/initialising field pMean
+    Reading/initialising field kMean
+    Reading/initialising field omegaMean
+
+fieldAverage fieldAverage1 write:
+    Calculating averages
+
+scalarTransport execute: CO2
+DILUPBiCGStab:  Solving for CO2, Initial residual = 0.98472932, Final residual = 1.8212016e-05, No Iterations 1
+scalarTransport: scalarTransport_CO2: CO2 is converged.
+	initial-residual tolerance: 1
+	outer iteration: 1
+
+Courant Number mean: 0.0011811895 max: 0.78752843
+deltaT = 0.0015237545
+Time = 0.0135238
+
+PIMPLE: iteration 1
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+DILUPBiCGStab:  Solving for Ux, Initial residual = 0.039023903, Final residual = 6.2573235e-06, No Iterations 1
+DILUPBiCGStab:  Solving for Uy, Initial residual = 0.041044857, Final residual = 4.6940204e-06, No Iterations 1
+DILUPBiCGStab:  Solving for Uz, Initial residual = 0.029099365, Final residual = 1.9688845e-06, No Iterations 1
+DILUPBiCGStab:  Solving for h, Initial residual = 0.031131916, Final residual = 7.2147947e-06, No Iterations 1
+GAMG:  Solving for p_rgh, Initial residual = 0.26561615, Final residual = 0.0017539438, No Iterations 5
+GAMG:  Solving for p_rgh, Initial residual = 0.0073647147, Final residual = 5.0677484e-05, No Iterations 7
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 4.0019614e-10, global = 3.3115272e-11, cumulative = -1.0603305e-08
+GAMG:  Solving for p_rgh, Initial residual = 0.18788664, Final residual = 0.0012331616, No Iterations 5
+GAMG:  Solving for p_rgh, Initial residual = 0.0056075714, Final residual = 7.0074829e-08, No Iterations 20
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 5.5384539e-13, global = 1.3519763e-15, cumulative = -1.0603304e-08
+PIMPLE: iteration 2
+DILUPBiCGStab:  Solving for Ux, Initial residual = 0.016200128, Final residual = 2.2836464e-06, No Iterations 1
+DILUPBiCGStab:  Solving for Uy, Initial residual = 0.016929158, Final residual = 1.7524852e-06, No Iterations 1
+DILUPBiCGStab:  Solving for Uz, Initial residual = 0.018590449, Final residual = 1.6804072e-06, No Iterations 1
+DILUPBiCGStab:  Solving for h, Initial residual = 0.084596813, Final residual = 2.4671314e-05, No Iterations 1
+GAMG:  Solving for p_rgh, Initial residual = 0.20929401, Final residual = 0.0013134771, No Iterations 8
+GAMG:  Solving for p_rgh, Initial residual = 0.005587824, Final residual = 3.2702611e-05, No Iterations 5
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 1.3964273e-09, global = 4.0268291e-11, cumulative = -1.0563036e-08
+GAMG:  Solving for p_rgh, Initial residual = 0.087662908, Final residual = 0.00054652847, No Iterations 8
+GAMG:  Solving for p_rgh, Initial residual = 0.0039774485, Final residual = 7.0670372e-08, No Iterations 17
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 3.0012876e-12, global = -5.2465695e-14, cumulative = -1.0563088e-08
+PIMPLE: iteration 3
+DILUPBiCGStab:  Solving for Ux, Initial residual = 0.051221927, Final residual = 8.862992e-06, No Iterations 1
+DILUPBiCGStab:  Solving for Uy, Initial residual = 0.019120855, Final residual = 1.770175e-06, No Iterations 1
+DILUPBiCGStab:  Solving for Uz, Initial residual = 0.026391701, Final residual = 2.1270246e-06, No Iterations 1
+DILUPBiCGStab:  Solving for h, Initial residual = 0.62819048, Final residual = 0.00019153243, No Iterations 1
+GAMG:  Solving for p_rgh, Initial residual = 0.42158542, Final residual = 0.0036516869, No Iterations 9
+GAMG:  Solving for p_rgh, Initial residual = 0.0056461981, Final residual = 3.332073e-05, No Iterations 5
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 1.4843166e-08, global = 1.1438374e-09, cumulative = -9.4192507e-09
+GAMG:  Solving for p_rgh, Initial residual = 0.040236354, Final residual = 0.0003450416, No Iterations 9
+GAMG:  Solving for p_rgh, Initial residual = 0.004036658, Final residual = 8.9386639e-08, No Iterations 17
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 3.9621885e-11, global = -1.8477016e-13, cumulative = -9.4194355e-09
+PIMPLE: iteration 4
+DILUPBiCGStab:  Solving for Ux, Initial residual = 0.20628718, Final residual = 3.8596124e-05, No Iterations 1
+DILUPBiCGStab:  Solving for Uy, Initial residual = 0.17824999, Final residual = 1.4411826e-05, No Iterations 1
+DILUPBiCGStab:  Solving for Uz, Initial residual = 0.10360445, Final residual = 6.6786499e-06, No Iterations 1
+DILUPBiCGStab:  Solving for h, Initial residual = 0.9474946, Final residual = 0.00029329648, No Iterations 1
+GAMG:  Solving for p_rgh, Initial residual = 0.38317326, Final residual = 0.0034035595, No Iterations 9
+GAMG:  Solving for p_rgh, Initial residual = 0.0056996352, Final residual = 3.4668524e-05, No Iterations 5
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 1.5855189e-07, global = 1.1858716e-08, cumulative = 2.4392809e-09
+GAMG:  Solving for p_rgh, Initial residual = 0.039325662, Final residual = 0.00034513595, No Iterations 9
+GAMG:  Solving for p_rgh, Initial residual = 0.0040614996, Final residual = 9.9191544e-08, No Iterations 17
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 4.5130462e-10, global = -1.921923e-12, cumulative = 2.437359e-09
+PIMPLE: iteration 5
+DILUPBiCGStab:  Solving for Ux, Initial residual = 0.33547922, Final residual = 8.0403882e-09, No Iterations 2
+DILUPBiCGStab:  Solving for Uy, Initial residual = 0.32879631, Final residual = 2.6797199e-09, No Iterations 2
+DILUPBiCGStab:  Solving for Uz, Initial residual = 0.28883821, Final residual = 2.5830098e-09, No Iterations 2
+DILUPBiCGStab:  Solving for h, Initial residual = 0.98408409, Final residual = 2.6088114e-08, No Iterations 2
+GAMG:  Solving for p_rgh, Initial residual = 0.39313727, Final residual = 0.0033973349, No Iterations 9
+GAMG:  Solving for p_rgh, Initial residual = 0.0057503482, Final residual = 3.8071351e-05, No Iterations 5
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 3.5252239e-06, global = 2.2906186e-07, cumulative = 2.3149921e-07
+GAMG:  Solving for p_rgh, Initial residual = 0.0035447132, Final residual = 3.278309e-05, No Iterations 6
+GAMG:  Solving for p_rgh, Initial residual = 0.00072741761, Final residual = 9.0124777e-08, No Iterations 11
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 7.8100989e-09, global = -8.125116e-11, cumulative = 2.3141796e-07
+DILUPBiCGStab:  Solving for omega, Initial residual = 0.0033518507, Final residual = 2.2163285e-08, No Iterations 2
+DILUPBiCGStab:  Solving for k, Initial residual = 0.29753535, Final residual = 6.5706828e-08, No Iterations 2
+ExecutionTime = 14.26 s  ClockTime = 14 s
+
+fieldAverage fieldAverage1 write:
+    Calculating averages
+
+scalarTransport execute: CO2
+DILUPBiCGStab:  Solving for CO2, Initial residual = 0.99420631, Final residual = 0.0058048827, No Iterations 1
+scalarTransport: scalarTransport_CO2: CO2 is converged.
+	initial-residual tolerance: 1
+	outer iteration: 1
+
+Courant Number mean: 0.12276138 max: 23.4552
+deltaT = 6.4964464e-06
+Time = 0.0135303
+
+PIMPLE: iteration 1
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+DILUPBiCGStab:  Solving for Ux, Initial residual = 0.0012500395, Final residual = 9.7735722e-09, No Iterations 1
+DILUPBiCGStab:  Solving for Uy, Initial residual = 0.0011833854, Final residual = 2.6382822e-09, No Iterations 1
+DILUPBiCGStab:  Solving for Uz, Initial residual = 0.0012312781, Final residual = 1.5794663e-09, No Iterations 1
+DILUPBiCGStab:  Solving for h, Initial residual = 0.11505693, Final residual = 7.5852154e-07, No Iterations 1
+GAMG:  Solving for p_rgh, Initial residual = 0.99638311, Final residual = 0.0089088121, No Iterations 9
+GAMG:  Solving for p_rgh, Initial residual = 0.0057938664, Final residual = 3.597535e-05, No Iterations 5
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 2.4119949e-07, global = 1.7372401e-08, cumulative = 2.4879036e-07
+GAMG:  Solving for p_rgh, Initial residual = 0.043549599, Final residual = 0.00038698379, No Iterations 9
+GAMG:  Solving for p_rgh, Initial residual = 0.0041340852, Final residual = 6.6308184e-08, No Iterations 18
+diagonal:  Solving for rho, Initial residual = 0, Final residual = 0, No Iterations 0
+time step continuity errors : sum local = 4.4414889e-10, global = -1.0267328e-11, cumulative = 2.487801e-07
+PIMPLE: iteration 2
+DILUPBiCGStab:  Solving for Ux, Initial residual = 0.17469434, Final residual = 4.6222468e-05, No Iterations 1
+DILUPBiCGStab:  Solving for Uy, Initial residual = 0.16687602, Final residual = 2.4658361e-05, No Iterations 1
+DILUPBiCGStab:  Solving for Uz, Initial residual = 0.15755087, Final residual = 4.2079463e-05, No Iterations 1
+DILUPBiCGStab:  Solving for h, Initial residual = 0.99998872, Final residual = 0.00010418753, No Iterations 1
+[2] [stack trace]
+[2] =============
+[2] #1  Foam::sigFpe::sigHandler(int) in /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so
+[2] #2  ? in /lib/x86_64-linux-gnu/libpthread.so.0
+[2] #3  Foam::GAMGSolver::scale(Foam::Field<double>&, Foam::Field<double>&, Foam::lduMatrix const&, Foam::FieldField<Foam::Field, double> const&, Foam::UPtrList<Foam::lduInterfaceField const> const&, Foam::Field<double> const&, unsigned char) const in /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so
+[2] #4  Foam::GAMGSolver::Vcycle(Foam::PtrList<Foam::lduMatrix::smoother> const&, Foam::Field<double>&, Foam::Field<double> const&, Foam::Field<double>&, Foam::Field<double>&, Foam::Field<double>&, Foam::Field<double>&, Foam::Field<double>&, Foam::PtrList<Foam::Field<double> >&, Foam::PtrList<Foam::Field<double> >&, unsigned char) const in /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so
+[2] #5  Foam::GAMGSolver::solve(Foam::Field<double>&, Foam::Field<double> const&, unsigned char) const in /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so
+[2] #6  Foam::fvMatrix<double>::solveSegregated(Foam::dictionary const&) in /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/lib/libfiniteVolume.so
+[2] #7  Foam::fvMatrix<double>::solveSegregatedOrCoupled(Foam::dictionary const&) in /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/lib/libfiniteVolume.so
+[2] #8  Foam::fvMesh::solve(Foam::fvMatrix<double>&, Foam::dictionary const&) const in /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/lib/libfiniteVolume.so
+[2] #9  ? in /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/bin/buoyantPimpleFoam
+[2] #10  ? in /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/bin/buoyantPimpleFoam
+[2] #11  __libc_start_main in /lib/x86_64-linux-gnu/libc.so.6
+[2] #12  ? in /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/bin/buoyantPimpleFoam
+[2] =============
+[plprm-HPEliteDesk:19590] *** Process received signal ***
+[plprm-HPEliteDesk:19590] Signal: Floating point exception (8)
+[plprm-HPEliteDesk:19590] Signal code:  (-6)
+[plprm-HPEliteDesk:19590] Failing at address: 0x3e800004c86
+[plprm-HPEliteDesk:19590] [ 0] /lib/x86_64-linux-gnu/libpthread.so.0(+0x14420)[0x7ff50fa55420]
+[plprm-HPEliteDesk:19590] [ 1] /lib/x86_64-linux-gnu/libpthread.so.0(raise+0xcb)[0x7ff50fa552ab]
+[plprm-HPEliteDesk:19590] [ 2] /lib/x86_64-linux-gnu/libpthread.so.0(+0x14420)[0x7ff50fa55420]
+[plprm-HPEliteDesk:19590] [ 3] /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so(_ZNK4Foam10GAMGSolver5scaleERNS_5FieldIdEES3_RKNS_9lduMatrixERKNS_10FieldFieldIS1_dEERKNS_8UPtrListIKNS_17lduInterfaceFieldEEERKS2_h+0xcd)[0x7ff51054596d]
+[plprm-HPEliteDesk:19590] [ 4] /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so(_ZNK4Foam10GAMGSolver6VcycleERKNS_7PtrListINS_9lduMatrix8smootherEEERNS_5FieldIdEERKS8_S9_S9_S9_S9_S9_RNS1_IS8_EESD_h+0x96b)[0x7ff51054760b]
+[plprm-HPEliteDesk:19590] [ 5] /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so(_ZNK4Foam10GAMGSolver5solveERNS_5FieldIdEERKS2_h+0x473)[0x7ff510549423]
+[plprm-HPEliteDesk:19590] [ 6] /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/lib/libfiniteVolume.so(_ZN4Foam8fvMatrixIdE15solveSegregatedERKNS_10dictionaryE+0x5b7)[0x7ff51568bea7]
+[plprm-HPEliteDesk:19590] [ 7] /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/lib/libfiniteVolume.so(_ZN4Foam8fvMatrixIdE24solveSegregatedOrCoupledERKNS_10dictionaryE+0x3bd)[0x7ff514f1391d]
+[plprm-HPEliteDesk:19590] [ 8] /usr/lib/openfoam/openfoam2412/platforms/linux64GccDPInt32Opt/lib/libfiniteVolume.so(_ZNK4Foam6fvMesh5solveERNS_8fvMatrixIdEERKNS_10dictionaryE+0x28)[0x7ff514eb0a38]
+[plprm-HPEliteDesk:19590] [ 9] buoyantPimpleFoam(+0x5042b)[0x55c443a4442b]
+[plprm-HPEliteDesk:19590] [10] buoyantPimpleFoam(+0x44333)[0x55c443a38333]
+[plprm-HPEliteDesk:19590] [11] /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf3)[0x7ff50f873083]
+[plprm-HPEliteDesk:19590] [12] buoyantPimpleFoam(+0x485de)[0x55c443a3c5de]
+[plprm-HPEliteDesk:19590] *** End of error message ***
+--------------------------------------------------------------------------
+Primary job  terminated normally, but 1 process returned
+a non-zero exit code. Per user-direction, the job has been aborted.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+mpirun noticed that process rank 2 with PID 0 on node plprm-HPEliteDesk exited on signal 8 (Floating point exception).
+--------------------------------------------------------------------------
+buoyantPimpleFoam already run on /home/plprm/FLOWDESK_OF/PYTHON_STEPS/cases/testJRM2025/sim: remove log file 'log.buoyantPimpleFoam' to re-run
+buoyantPimpleFoam already run on /home/plprm/FLOWDESK_OF/PYTHON_STEPS/cases/testJRM2025/sim: remove log file 'log.buoyantPimpleFoam' to re-run

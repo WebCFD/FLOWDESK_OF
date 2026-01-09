@@ -1,0 +1,118 @@
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class volScalarField;    location "0.orig";
+    object G;
+}
+
+dimensions [1 0 -3 0 0 0 0];
+
+internalField uniform 0.0;
+
+boundaryField
+{
+    wall_0F_1
+    {
+    
+        type MarshakRadiation;
+    
+        emissivityMode lookup;
+    
+        emissivity 0.9;
+    
+        value uniform 0.0;
+    }
+    door_0F_1
+    {
+    
+        type zeroGradient;
+    }
+    wall_0F_2
+    {
+    
+        type MarshakRadiation;
+    
+        emissivityMode lookup;
+    
+        emissivity 0.9;
+    
+        value uniform 0.0;
+    }
+    window_0F_2
+    {
+    
+        type zeroGradient;
+    }
+    wall_0F_3
+    {
+    
+        type MarshakRadiation;
+    
+        emissivityMode lookup;
+    
+        emissivity 0.9;
+    
+        value uniform 0.0;
+    }
+    wall_0F_4
+    {
+    
+        type MarshakRadiation;
+    
+        emissivityMode lookup;
+    
+        emissivity 0.9;
+    
+        value uniform 0.0;
+    }
+    wall_0F_5
+    {
+    
+        type MarshakRadiation;
+    
+        emissivityMode lookup;
+    
+        emissivity 0.9;
+    
+        value uniform 0.0;
+    }
+    wall_0F_6
+    {
+    
+        type MarshakRadiation;
+    
+        emissivityMode lookup;
+    
+        emissivity 0.9;
+    
+        value uniform 0.0;
+    }
+    window_0F_1
+    {
+    
+        type zeroGradient;
+    }
+    floor_0F
+    {
+    
+        type MarshakRadiation;
+    
+        emissivityMode lookup;
+    
+        emissivity 0.9;
+    
+        value uniform 0.0;
+    }
+    ceil_0F
+    {
+    
+        type MarshakRadiation;
+    
+        emissivityMode lookup;
+    
+        emissivity 0.9;
+    
+        value uniform 0.0;
+    }
+}

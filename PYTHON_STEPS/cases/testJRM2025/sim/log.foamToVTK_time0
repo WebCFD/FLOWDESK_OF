@@ -1,0 +1,49 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _f00230df-20250528 OPENFOAM=2412 patch=250528 version=2412
+Arch   : "LSB;label=32;scalar=64"
+Exec   : foamToVTK -time 0 -fields (T U p p_rgh h)
+Date   : Jan 09 2026
+Time   : 22:46:58
+Host   : plprm-HPEliteDesk
+PID    : 19559
+I/O    : uncollated
+Case   : /home/plprm/FLOWDESK_OF/PYTHON_STEPS/cases/testJRM2025/sim
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Including fields (T U p p_rgh h)
+
+Create time
+
+Initial memory 181228 kB
+Create mesh for time = 0
+
+VTK mesh topology: 1.01 s, 232920 kB
+Time: 0
+    volScalar    : T h p p_rgh
+    volVector    : U
+    Internal  : "VTK/sim_0/internal.vtu"
+    Boundary  : "VTK/sim_0/boundary/ceil_0F.vtp"
+    Boundary  : "VTK/sim_0/boundary/door_0F_1.vtp"
+    Boundary  : "VTK/sim_0/boundary/floor_0F.vtp"
+    Boundary  : "VTK/sim_0/boundary/wall_0F_1.vtp"
+    Boundary  : "VTK/sim_0/boundary/wall_0F_2.vtp"
+    Boundary  : "VTK/sim_0/boundary/wall_0F_3.vtp"
+    Boundary  : "VTK/sim_0/boundary/wall_0F_4.vtp"
+    Boundary  : "VTK/sim_0/boundary/wall_0F_5.vtp"
+    Boundary  : "VTK/sim_0/boundary/wall_0F_6.vtp"
+    Boundary  : "VTK/sim_0/boundary/window_0F_1.vtp"
+    Boundary  : "VTK/sim_0/boundary/window_0F_2.vtp"
+Wrote in 1.23 s, 396632 kB
+
+End: 2.24 s, 403172 kB (peak)
+

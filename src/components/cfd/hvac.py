@@ -3,6 +3,7 @@ import shutil
 import logging
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 from foamlib import FoamCase, FoamFile
 from src.components.tools.cpu_cores_partitions import best_cpu_partition
@@ -10,6 +11,10 @@ from src.components.tools.populate_template_file import replace_in_file
 
 
 logger = logging.getLogger(__name__)
+
+# Calculate project root: 4 levels up from this file
+# src/components/cfd/hvac.py -> src/components/cfd/ -> src/components/ -> src/ -> FLOWDESK_OF/
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 
 
@@ -49,13 +54,15 @@ INTERNALFIELD_DICT = {
     'T':        293.15,     # Reference temperature for Boussinesq [K] (20°C)
     'U':        np.array([0, 0, 0]),  # Initial velocity (quiescent fluid)
     
-    # Turbulence fields (I=5%, U_ref=1m/s, L=0.1m)
-    # For I=5%, U_ref=1m/s: k = 1.5*(0.05*1)² = 0.00375 m²/s²
-    # For L=0.1m, C_μ=0.09: ω = √k/(C_μ^0.25*L) = √0.00375/(0.09^0.25*0.1) ≈ 1.12 [1/s]
-    'k':        0.00375,    # Turbulent kinetic energy [m²/s²]
-    'omega':    1.12,       # Specific dissipation rate [1/s]
-    'alphat':   0,          # Turbulent thermal diffusivity [m²/s] (computed by solver)
-    'nut':      0,          # Turbulent kinematic viscosity [m²/s] (computed by solver)
+    # Turbulence fields (default values from OpenFOAM BC Guide)
+    # k ≈ 0.01 m²/s² (typical low turbulence)
+    # ω ≈ 0.5 1/s (typical for building ventilation)
+    # nut = k/ω = 0.01/0.5 = 0.02 m²/s
+    # alphat = ρ·nut/Prt = 1.2 × 0.02 / 0.85 ≈ 0.028 kg/(m·s)
+    'k':        0.01,       # Turbulent kinetic energy [m²/s²]
+    'omega':    0.5,        # Specific dissipation rate [1/s]
+    'alphat':   0.028,      # Turbulent thermal diffusivity [kg/(m·s)] (alphat = ρ·nut/Prt)
+    'nut':      0.02,       # Turbulent kinematic viscosity [m²/s] (nut = k/ω)
     
     # Scalar transport
     'CO2':      400e-6,     # 400 ppm CO2 (exterior ambient)
@@ -184,8 +191,8 @@ def create_decomposeParDict_local(sim_path):
     n_cpu_available, (n_x, n_y, n_z) = best_cpu_partition(n_cores)
     logger.info(f"    * Optimal partition: {n_cpu_available} cores = ({n_x}, {n_y}, {n_z})")
     
-    # Use template from inductiva settings
-    template_path = os.path.join(os.getcwd(), "data", "settings", "solve", "inductiva")
+    # Use template from inductiva settings (use PROJECT_ROOT for robust path resolution)
+    template_path = str(PROJECT_ROOT / "data" / "settings" / "solve" / "inductiva")
     input_path = os.path.join(template_path, "system", "decomposeParDict")
     output_path = os.path.join(sim_path, "system", "decomposeParDict")
     
@@ -287,15 +294,25 @@ def define_radiation_bcs(variable, patch_type):
     """
     bc = {}
     
-    if patch_type == 'wall':
-        # Marshak radiation boundary condition for walls
-        bc["type"] = "MarshakRadiation"
-        bc["emissivityMode"] = "lookup"
-        bc["emissivity"] = 0.9  # Default wall emissivity
-        bc["value"] = 0
-    else:
-        # Zero gradient for inlets/outlets
-        bc["type"] = "zeroGradient"
+    if variable == 'G':
+        if patch_type == 'wall':
+            # Marshak radiation boundary condition for walls
+            bc["type"] = "MarshakRadiation"
+            bc["emissivityMode"] = "lookup"
+            bc["emissivity"] = 0.9  # Default wall emissivity
+            bc["value"] = 0
+        else:
+            # Zero gradient for inlets/outlets
+            bc["type"] = "zeroGradient"
+    
+    elif variable == 'qr':
+        if patch_type == 'wall':
+            # Calculated from G field and wall temperature
+            bc["type"] = "calculated"
+            bc["value"] = 0
+        else:
+            # Zero gradient for inlets/outlets
+            bc["type"] = "zeroGradient"
     
     return bc
 
@@ -315,11 +332,16 @@ def define_scalar_bcs(variable, patch_type, patch_row):
     bc = {}
     
     if variable == 'CO2':
-        if patch_type in ['velocity_inlet', 'mass_flow_inlet', 'pressure_inlet']:
+        if patch_type in ['velocity_inlet', 'mass_flow_inlet']:
             # Fixed CO2 concentration at inlet (ambient 400 ppm)
             bc["type"] = "fixedValue"
             bc["value"] = 400e-6  # 400 ppm
-        elif patch_type in ['pressure_outlet']:
+        elif patch_type == 'pressure_inlet':
+            # Bidirectional CO2: inletOutlet for backflow scenarios
+            bc["type"] = "inletOutlet"
+            bc["inletValue"] = 400e-6  # Exterior air: 400 ppm
+            bc["value"] = INTERNALFIELD_DICT['CO2']
+        elif patch_type == 'pressure_outlet':
             # Outlet: allow CO2 to leave, prevent backflow contamination
             bc["type"] = "inletOutlet"
             bc["inletValue"] = 400e-6
@@ -469,8 +491,9 @@ def define_initial_files(sim_path, patch_df):
                 # Handle base fields (h, p, p_rgh, T, U) with original logic
                 elif patch_type == 'wall':
                     if(variable == 'h'):
-                        # Adiabatic walls: zero gradient for enthalpy
-                        new_bc_data["type"] = 'zeroGradient'
+                        # Calculated from temperature BC (h = Cp×T)
+                        new_bc_data["type"] = 'calculated'
+                        new_bc_data["value"] = INTERNALFIELD_DICT['h']
                     elif(variable == 'p'):
                         # p = p_rgh + p_atm (for walls, p_rgh ≈ 0)
                         new_bc_data["type"] = 'calculated'
@@ -487,13 +510,9 @@ def define_initial_files(sim_path, patch_df):
                         raise BaseException('Unknown variable')
                 elif(row['type'] == 'velocity_inlet'):
                     if(variable == 'h'):
-                        # Enthalpy for perfectGas: h = Cp×T
-                        new_bc_data["type"] = 'fixedValue'
-                        T_celsius = row['T']
-                        T_wall = T_celsius + 273.15
-                        h_value = CP * T_wall
-                        logger.info(f"    BC {row['id']} ({row['type']}): T={T_celsius}°C → T_K={T_wall}K → h={h_value} J/kg")
-                        new_bc_data["value"] = h_value
+                        # Calculated from temperature BC (h = Cp×T)
+                        new_bc_data["type"] = 'calculated'
+                        new_bc_data["value"] = INTERNALFIELD_DICT['h']
                     elif(variable == 'p'):
                         # p = p_rgh + p_atm (for walls, p_rgh ≈ 0)
                         new_bc_data["type"] = 'calculated'
@@ -505,67 +524,30 @@ def define_initial_files(sim_path, patch_df):
                         new_bc_data["type"] = 'fixedValue'
                         new_bc_data["value"] = row['T'] + 273.15
                     elif(variable == 'U'):
-                        new_bc_data["type"] = 'fixedValue'
                         if (row['open']):
+                            new_bc_data["type"] = 'fixedValue'
                             new_bc_data["value"] = row['U'] * np.array([row['nx'], row['ny'], row['nz']])
                         else:
-                            new_bc_data["value"] = np.array([0, 0, 0])
+                            # Closed velocity_inlet behaves as wall with no-slip condition
+                            new_bc_data["type"] = 'noSlip'
                     else:
                         raise BaseException('Unknown variable')
                 elif(row['type'] == 'pressure_inlet'):
                     if(variable == 'h'):
-                        # Enthalpy for perfectGas: h = Cp×T (use exterior temperature from CSV)
-                        new_bc_data["type"] = 'fixedValue'
-                        T_celsius = row['T']
-                        T_exterior = T_celsius + 273.15  # Convert °C → K
-                        h_value = CP * T_exterior
-                        logger.info(f"    BC {row['id']} ({row['type']}): T={T_celsius}°C → T_K={T_exterior}K → h={h_value} J/kg")
-                        new_bc_data["value"] = h_value
-                    elif(variable == 'p'):
-                        # Let solver calculate p from p_rgh + ρ·g·h (hydrostatic consistency)
+                        # Calculated from temperature BC (h = Cp×T)
                         new_bc_data["type"] = 'calculated'
-                        new_bc_data["value"] = INTERNALFIELD_DICT[variable]
-                    elif(variable == 'p_rgh'):
-                        # p_rgh value for atmospheric pressure at typical aperture height
-                        # This ensures p ≈ 101325 Pa at the opening, not ~0 Pa
-                        new_bc_data["type"] = 'fixedValue'
-                        new_bc_data["value"] = P_RGH_APERTURE  # 101325 Pa
-                        logger.info(f"    BC {row['id']} ({row['type']}): p_rgh = {P_RGH_APERTURE:.1f} Pa → p ≈ {P_ATM:.0f} Pa")
-                    elif(variable == 'T'):
-                        # Temperature inlet: fixedValue to impose exterior temperature
-                        new_bc_data["type"] = 'fixedValue'
-                        new_bc_data["value"] = row['T'] + 273.15  # Convert °C → K
-                        logger.info(f"    BC {row['id']} ({row['type']}): T = {row['T']}°C = {row['T'] + 273.15}K")
-                    elif(variable == 'U'):
-                        if (row['open']):
-                            # Use pressureInletOutletVelocity for pressure-driven inflow
-                            new_bc_data["type"] = 'pressureInletOutletVelocity'
-                            new_bc_data["value"] = INTERNALFIELD_DICT[variable]
-                        else:
-                            new_bc_data["type"] = 'fixedValue'
-                            new_bc_data["value"] = np.array([0, 0, 0])
-                    else:
-                        raise BaseException('Unknown variable')
-                elif(row['type'] == 'pressure_outlet'):
-                    if(variable == 'h'):
-                        # Bidirectional enthalpy: inletOutlet for backflow scenarios
-                        new_bc_data["type"] = 'inletOutlet'
-                        T_celsius = row['T']
-                        T_exterior = T_celsius + 273.15  # Convert °C → K
-                        h_value = CP * T_exterior
-                        new_bc_data["inletValue"] = h_value
-                        new_bc_data["value"] = h_value
-                        logger.info(f"    BC {row['id']} ({row['type']}): T={T_celsius}°C → T_K={T_exterior}K → h={h_value} J/kg (inletOutlet)")
+                        new_bc_data["value"] = INTERNALFIELD_DICT['h']
                     elif(variable == 'p'):
-                        # Let solver calculate p from p_rgh + ρ·g·h (hydrostatic consistency)
+                        # Initialization identical to p_rgh (calculated from pressure differential)
                         new_bc_data["type"] = 'calculated'
-                        new_bc_data["value"] = INTERNALFIELD_DICT[variable]
+                        new_bc_data["value"] = P_RGH_APERTURE + row['pressure']
                     elif(variable == 'p_rgh'):
-                        # p_rgh value for atmospheric pressure at typical aperture height
-                        # This ensures p ≈ 101325 Pa at the opening, not ~0 Pa
+                        # p_rgh value with user-defined pressure differential
+                        # Apply ΔP from flowIntensity: p_rgh = p_atm + ΔP
                         new_bc_data["type"] = 'fixedValue'
-                        new_bc_data["value"] = P_RGH_APERTURE  # 101325 Pa
-                        logger.info(f"    BC {row['id']} ({row['type']}): p_rgh = {P_RGH_APERTURE:.1f} Pa → p ≈ {P_ATM:.0f} Pa")
+                        p_rgh_value = P_RGH_APERTURE + row['pressure']  # 101325 + ΔP
+                        new_bc_data["value"] = p_rgh_value
+                        logger.info(f"    BC {row['id']} ({row['type']}): p_rgh = {p_rgh_value:.1f} Pa (ΔP = {row['pressure']:.1f} Pa)")
                     elif(variable == 'T'):
                         # Bidirectional temperature: inletOutlet for backflow scenarios
                         new_bc_data["type"] = 'inletOutlet'
@@ -575,21 +557,52 @@ def define_initial_files(sim_path, patch_df):
                         logger.info(f"    BC {row['id']} ({row['type']}): T = {row['T']}°C = {T_exterior}K (inletOutlet)")
                     elif(variable == 'U'):
                         if (row['open']):
-                            # Use inletOutlet for adjustable mass flow conservation
-                            new_bc_data["type"] = 'inletOutlet'
-                            new_bc_data["inletValue"] = INTERNALFIELD_DICT[variable]
+                            # Use pressureInletOutletVelocity for pressure-driven inflow
+                            new_bc_data["type"] = 'pressureInletOutletVelocity'
                             new_bc_data["value"] = INTERNALFIELD_DICT[variable]
                         else:
-                            new_bc_data["type"] = 'fixedValue'
-                            new_bc_data["value"] = np.array([0, 0, 0])
+                            # Closed pressure_inlet behaves as wall with no-slip condition
+                            new_bc_data["type"] = 'noSlip'
+                    else:
+                        raise BaseException('Unknown variable')
+                elif(row['type'] == 'pressure_outlet'):
+                    if(variable == 'h'):
+                        # Calculated from temperature BC (h = Cp×T)
+                        new_bc_data["type"] = 'calculated'
+                        new_bc_data["value"] = INTERNALFIELD_DICT['h']
+                    elif(variable == 'p'):
+                        # Initialization identical to p_rgh (calculated from pressure differential)
+                        new_bc_data["type"] = 'calculated'
+                        new_bc_data["value"] = P_RGH_APERTURE + row['pressure']
+                    elif(variable == 'p_rgh'):
+                        # p_rgh value with user-defined pressure differential
+                        # Apply ΔP from flowIntensity: p_rgh = p_atm + ΔP
+                        new_bc_data["type"] = 'fixedValue'
+                        p_rgh_value = P_RGH_APERTURE + row['pressure']  # 101325 + ΔP (negative for outlet)
+                        new_bc_data["value"] = p_rgh_value
+                        logger.info(f"    BC {row['id']} ({row['type']}): p_rgh = {p_rgh_value:.1f} Pa (ΔP = {row['pressure']:.1f} Pa)")
+                    elif(variable == 'T'):
+                        # Bidirectional temperature: inletOutlet for backflow scenarios
+                        new_bc_data["type"] = 'inletOutlet'
+                        T_exterior = row['T'] + 273.15  # Convert °C → K
+                        new_bc_data["inletValue"] = T_exterior
+                        new_bc_data["value"] = T_exterior
+                        logger.info(f"    BC {row['id']} ({row['type']}): T = {row['T']}°C = {T_exterior}K (inletOutlet)")
+                    elif(variable == 'U'):
+                        if (row['open']):
+                            # Use pressureInletOutletVelocity for bidirectional pressure-driven flow
+                            new_bc_data["type"] = 'pressureInletOutletVelocity'
+                            new_bc_data["value"] = INTERNALFIELD_DICT[variable]
+                        else:
+                            # Closed pressure_outlet behaves as wall with no-slip condition
+                            new_bc_data["type"] = 'noSlip'
                     else:
                         raise BaseException('Unknown variable')
                 elif(row['type'] == 'mass_flow_inlet'):
                     if(variable == 'h'):
-                        # Enthalpy for perfectGas: h = Cp×T
-                        new_bc_data["type"] = 'fixedValue'
-                        T_inlet = row['T'] + 273.15
-                        new_bc_data["value"] = CP * T_inlet
+                        # Calculated from temperature BC (h = Cp×T)
+                        new_bc_data["type"] = 'calculated'
+                        new_bc_data["value"] = INTERNALFIELD_DICT['h']
                     elif(variable == 'p'):
                         # p = p_rgh + p_atm (for walls, p_rgh ≈ 0)
                         new_bc_data["type"] = 'calculated'
@@ -647,12 +660,12 @@ def setup(case_path: str, simulation_type: str = 'comfortTest', transient: bool 
     logger.info("    * Creating initial field files")
     define_initial_files(sim_path, geo_df)
 
-    # Select template based on transient flag
+    # Select template based on transient flag (use PROJECT_ROOT for robust path resolution)
     if transient:
-        template_path = os.path.join(os.getcwd(), "data", "settings", "cfd", "hvac_transient")
+        template_path = str(PROJECT_ROOT / "data" / "settings" / "cfd" / "hvac_transient")
         logger.info(f"    * Using TRANSIENT templates (buoyantPimpleFoam + kOmegaSST + radiationP1 + CO2)")
     else:
-        template_path = os.path.join(os.getcwd(), "data", "settings", "cfd", "hvac")
+        template_path = str(PROJECT_ROOT / "data" / "settings" / "cfd" / "hvac")
         logger.info(f"    * Using STEADY templates (buoyantSimpleFoam + laminar)")
     
     logger.info(f"    * Loading CFD configuration templates from: {template_path}")
@@ -681,9 +694,9 @@ def setup(case_path: str, simulation_type: str = 'comfortTest', transient: bool 
     logger.info(f"    * Updating controlDict iterations based on simulation type: {simulation_type}")
     update_controldict_iterations(case_path, simulation_type, transient=transient)
 
-    # Copy calculate_comfort.py script to case directory for PMV/PPD calculations
+    # Copy calculate_comfort.py script to case directory for PMV/PPD calculations (use PROJECT_ROOT)
     logger.info("    * Copying calculate_comfort.py script to case directory")
-    comfort_script_source = os.path.join(os.getcwd(), "src", "components", "post", "calculate_comfort.py")
+    comfort_script_source = str(PROJECT_ROOT / "src" / "components" / "post" / "calculate_comfort.py")
     comfort_script_dest = os.path.join(sim_path, "calculate_comfort.py")
     shutil.copy(src=comfort_script_source, dst=comfort_script_dest)
     logger.info(f"    * Comfort script copied to: {comfort_script_dest}")
@@ -695,20 +708,13 @@ def setup(case_path: str, simulation_type: str = 'comfortTest', transient: bool 
         'rm -rf 0',
         'cp -r 0.orig 0',
         'echo "==================== INITIAL CONDITIONS COPIED ===================="',
+        
+        # Apply hydrostatic pressure distribution for physical consistency
+        # APPLIED TO BOTH STEADY AND TRANSIENT: Ensures p(z) = p_atm - rho*g*z from start
+        'echo "==================== APPLYING HYDROSTATIC PRESSURE GRADIENT ===================="',
+        'runApplication setFields',
+        'echo "==================== HYDROSTATIC PRESSURE INITIALIZED: p(z) = p_atm - rho*g*z ===================="',
     ]
-    
-    # Hydrostatic pressure initialization (ONLY for steady-state)
-    if not transient:
-        script_commands.extend([
-            # Apply hydrostatic pressure distribution for physical consistency
-            'echo "==================== APPLYING HYDROSTATIC PRESSURE GRADIENT (STEADY) ===================="',
-            'runApplication setFields',
-            'echo "==================== HYDROSTATIC PRESSURE INITIALIZED: p(z) = p_atm - rho*g*z ===================="',
-        ])
-    else:
-        script_commands.extend([
-            'echo "==================== TRANSIENT MODE: Keeping uniform initial fields (no setFields) ===================="',
-        ])
     
     # Continue with common steps
     script_commands.extend([
@@ -730,13 +736,77 @@ def setup(case_path: str, simulation_type: str = 'comfortTest', transient: bool 
         'cp processor0/constant/thermophysicalProperties debug_files/processor0_thermo',
         'echo "==================== DEBUG FILES COPIED ===================="',
         
-        # Initialize velocity and pressure fields with Laplacian solution for better stability
-        'echo "==================== INITIALIZING FIELDS WITH potentialFoam ===================="',
-        f'runParallel -np {n_cpu_available} potentialFoam -initialiseUBCs -parallel',
-        'echo "==================== FIELD INITIALIZATION COMPLETED ===================="',
+        # potentialFoam REMOVED: Incompatible with buoyant solvers (variable density)
+        # - potentialFoam assumes constant density (incompressible)
+        # - buoyantPimpleFoam uses variable density ρ(T) with thermal buoyancy
+        # - Starting from U=0 is physically correct and solver develops flow naturally
+        # Solution: buoyantPimpleFoam will develop velocity field from rest in 2-3 timesteps
+    ])
+    
+    # Run solver: TRANSIENT uses 3-phase progressive CFL, STEADY uses single execution
+    if transient:
+        # ========== TRANSIENT: 3-PHASE PROGRESSIVE CFL STRATEGY ==========
+        # Phase 1: Conservative start-up (timesteps 0-100, CFL=0.1)
+        # Phase 2: Transition ramp-up (timesteps 100-400, CFL=0.5)
+        # Phase 3: Normal operation (timesteps 400+, CFL=0.8)
         
-        # Run solver in parallel (select solver based on transient flag)
-        f'runParallel -np {n_cpu_available} {"buoyantPimpleFoam" if transient else "buoyantSimpleFoam"} -parallel',
+        script_commands.extend([
+            'echo "=========================================================================="',
+            'echo "TRANSIENT SOLVER: 3-PHASE PROGRESSIVE CFL STRATEGY"',
+            'echo "Phase 1: Timesteps 0-100 (CFL=0.1) - Conservative start-up"',
+            'echo "Phase 2: Timesteps 100-400 (CFL=0.5) - Transition ramp-up"',
+            'echo "Phase 3: Timesteps 400+ (CFL=0.8) - Normal operation"',
+            'echo "=========================================================================="',
+            '',
+            # PHASE 1: Conservative start-up
+            'echo "==================== PHASE 1: CONSERVATIVE START-UP ===================="',
+            'echo "Configuring: maxCo=0.1, maxAlphaCo=0.1, endTime=100"',
+            'foamDictionary system/controlDict -entry maxCo -set 0.1',
+            'foamDictionary system/controlDict -entry maxAlphaCo -set 0.1',
+            'foamDictionary system/controlDict -entry writeControl -set timeStep',
+            'foamDictionary system/controlDict -entry writeInterval -set 20',
+            'foamDictionary system/controlDict -entry endTime -set 100',
+            'echo "Starting buoyantPimpleFoam Phase 1..."',
+            f'runParallel -np {n_cpu_available} buoyantPimpleFoam -parallel 2>&1 | tee -a log.buoyantPimpleFoam',
+            'echo "==================== PHASE 1 COMPLETED ===================="',
+            '',
+            # PHASE 2: Transition ramp-up
+            'echo "==================== PHASE 2: TRANSITION RAMP-UP ===================="',
+            'echo "Configuring: maxCo=0.5, maxAlphaCo=0.5, timesteps 100-400"',
+            'foamDictionary system/controlDict -entry maxCo -set 0.5',
+            'foamDictionary system/controlDict -entry maxAlphaCo -set 0.5',
+            'foamDictionary system/controlDict -entry startTime -set latestTime',
+            'foamDictionary system/controlDict -entry endTime -set 400',
+            'foamDictionary system/controlDict -entry writeInterval -set 50',
+            'echo "Continuing buoyantPimpleFoam Phase 2 from latest time..."',
+            f'runParallel -np {n_cpu_available} buoyantPimpleFoam -parallel 2>&1 | tee -a log.buoyantPimpleFoam',
+            'echo "==================== PHASE 2 COMPLETED ===================="',
+            '',
+            # PHASE 3: Normal operation
+            'echo "==================== PHASE 3: NORMAL OPERATION ===================="',
+            'echo "Configuring: maxCo=0.8, maxAlphaCo=0.8, timesteps 400-1000"',
+            'foamDictionary system/controlDict -entry maxCo -set 0.8',
+            'foamDictionary system/controlDict -entry maxAlphaCo -set 0.8',
+            'foamDictionary system/controlDict -entry startTime -set latestTime',
+            'foamDictionary system/controlDict -entry endTime -set 1000',
+            'foamDictionary system/controlDict -entry writeInterval -set 100',
+            'echo "Continuing buoyantPimpleFoam Phase 3 from latest time..."',
+            f'runParallel -np {n_cpu_available} buoyantPimpleFoam -parallel 2>&1 | tee -a log.buoyantPimpleFoam',
+            'echo "==================== PHASE 3 COMPLETED ===================="',
+            'echo "=========================================================================="',
+            'echo "ALL 3 PHASES COMPLETED SUCCESSFULLY"',
+            'echo "=========================================================================="',
+        ])
+    else:
+        # ========== STEADY: Single execution ==========
+        script_commands.extend([
+            'echo "==================== RUNNING STEADY-STATE SOLVER ===================="',
+            f'runParallel -np {n_cpu_available} buoyantSimpleFoam -parallel',
+            'echo "==================== STEADY SOLVER COMPLETED ===================="',
+        ])
+    
+    # Continue with common post-processing steps
+    script_commands.extend([
 
         # 3. Reconstruct ALL timesteps (not just latestTime) for complete iteration history
         'echo "==================== RECONSTRUCTING ALL ITERATIONS ===================="',

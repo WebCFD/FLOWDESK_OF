@@ -1,0 +1,76 @@
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class volVectorField;    location "0.orig";
+    object U;
+}
+
+dimensions [0 1 -1 0 0 0 0];
+
+internalField uniform (0.0 0.0 0.0);
+
+boundaryField
+{
+    wall_0F_1
+    {
+    
+        type noSlip;
+    }
+    door_0F_1
+    {
+    
+        type pressureInletOutletVelocity;
+    
+        value uniform (0.0 0.0 0.0);
+    }
+    wall_0F_2
+    {
+    
+        type noSlip;
+    }
+    window_0F_2
+    {
+    
+        type pressureInletOutletVelocity;
+    
+        value uniform (0.0 0.0 0.0);
+    }
+    wall_0F_3
+    {
+    
+        type noSlip;
+    }
+    wall_0F_4
+    {
+    
+        type noSlip;
+    }
+    wall_0F_5
+    {
+    
+        type noSlip;
+    }
+    wall_0F_6
+    {
+    
+        type noSlip;
+    }
+    window_0F_1
+    {
+    
+        type pressureInletOutletVelocity;
+    
+        value uniform (0.0 0.0 0.0);
+    }
+    floor_0F
+    {
+    
+        type noSlip;
+    }
+    ceil_0F
+    {
+    
+        type noSlip;
+    }
+}

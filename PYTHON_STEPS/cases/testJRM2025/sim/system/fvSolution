@@ -1,0 +1,171 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    "rho.*"
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-7;
+        relTol          0.1;
+    }
+
+    p_rgh
+    {
+        solver          GAMG;
+        smoother        GaussSeidel;
+        tolerance       1e-7;
+        relTol          0.01;
+        nPreSweeps      0;
+        nPostSweeps     2;
+        cacheAgglomeration true;
+        nCellsInCoarsestLevel 10;
+        agglomerator    faceAreaPair;
+        mergeLevels     1;
+    }
+
+    p_rghFinal
+    {
+        $p_rgh;
+        relTol          0;
+    }
+
+    "(U|h|k|omega|epsilon)"
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-7;
+        relTol          0.1;
+    }
+
+    "(U|h|k|omega|epsilon)Final"
+    {
+        $U;
+        relTol          0;
+    }
+
+    // Scalar transport (CO2)
+    CO2
+    {
+        $U;
+        relTol          0.01;
+    }
+
+    // Age of air
+    age
+    {
+        $U;
+        relTol          0.01;
+    }
+
+    // Radiation (if P1 model active)
+    G
+    {
+        solver          GAMG;
+        smoother        GaussSeidel;
+        tolerance       1e-6;
+        relTol          0.1;
+    }
+
+    GFinal
+    {
+        $G;
+        relTol          0;
+    }
+}
+
+PIMPLE
+{
+    // ============================================================
+    // ULTRA-STABLE CONFIGURATION
+    // Use for initial convergence and difficult cases
+    // ============================================================
+    
+    nOuterCorrectors        5;      // More outer iterations for stability
+    // HIGH ACCURACY: nOuterCorrectors  3;
+    
+    nCorrectors             2;      // Pressure correctors per outer loop
+    nNonOrthogonalCorrectors 1;     // Non-orthogonal corrections
+    
+    // Momentum predictor
+    momentumPredictor       yes;
+    
+    // Consistent formulation for transient
+    consistent              yes;
+    
+    // Reference pressure
+    pRefCell                0;
+    pRefValue               0;
+    
+    // Residual control for outer loop (strict for stability)
+    outerCorrectorResidualControl
+    {
+        p_rgh
+        {
+            tolerance       5e-5;   // Stricter tolerance
+            relTol          0;
+            // HIGH ACCURACY: tolerance 1e-4;
+        }
+        U
+        {
+            tolerance       5e-5;   // Stricter tolerance
+            relTol          0;
+            // HIGH ACCURACY: tolerance 1e-4;
+        }
+        h
+        {
+            tolerance       5e-5;   // Stricter tolerance
+            relTol          0;
+            // HIGH ACCURACY: tolerance 1e-4;
+        }
+    }
+}
+
+relaxationFactors
+{
+    fields
+    {
+        // ============================================================
+        // ULTRA-STABLE RELAXATION (slower convergence, no oscillations)
+        // ============================================================
+        
+        rho             0.05;   // Very conservative density updates
+        // HIGH ACCURACY: rho    0.1;
+        
+        p_rgh           0.3;    // Pressure relaxation (can go to 0.2 if unstable)
+    }
+    equations
+    {
+        // Conservative relaxation for all equations
+        U               0.5;    // Momentum (reduced from 0.7)
+        h               0.5;    // Energy (reduced from 0.7)
+        k               0.5;    // Turbulent kinetic energy (reduced from 0.7)
+        omega           0.5;    // Specific dissipation rate (reduced from 0.7)
+        epsilon         0.5;    // Dissipation rate (reduced from 0.7)
+        
+        // HIGH ACCURACY (after ~100s stable):
+        // U               0.7;
+        // h               0.7;
+        // k               0.7;
+        // omega           0.7;
+        // epsilon         0.7;
+        
+        ".*Final"       1.0;    // No relaxation for final correctors
+    }
+}
+
+// ************************************************************************* //

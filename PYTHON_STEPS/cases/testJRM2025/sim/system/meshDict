@@ -1,0 +1,95 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | cfMesh: A library for mesh generation          | 
+|  \\    /   O peration     |                                                 |
+|   \\  /    A nd           | Author: Franjo Juretic                          | 
+|    \\/     M anipulation  | E-mail: franjo.juretic@c-fields.com            |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version   2.0;
+    format    ascii;
+    class     dictionary;
+    location  "system";
+    object    meshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+surfaceFile "constant/triSurface/geometry.fms";
+
+// Tamaños base - malla ligera
+maxCellSize 0.060000;
+
+minCellSize 0.060000;
+
+
+boundaryCellSize 0.060000;
+
+
+// Refinamiento LOCAL en BCs críticos y objetos 3D
+localRefinement
+{
+    "window.*"
+    {
+        cellSize 0.060000;
+        refinementThickness 0.060000;
+    }
+    
+    "door.*"
+    {
+        cellSize 0.060000;
+        refinementThickness 0.060000;
+    }
+}
+
+
+/*
+// Boundary layers - celdas prismáticas en BCs
+boundaryLayers
+{
+    nLayers 0;
+    thicknessRatio 1;
+    maxFirstLayerThickness 0.048000;
+    
+    patchBoundaryLayers
+    {
+        "window.*"
+        {
+            nLayers 0;
+            allowDiscontinuity 1;
+        }
+        
+        "door.*"
+        {
+            nLayers 0;
+            allowDiscontinuity 1;
+        }
+    }
+}
+*/
+
+
+// Para flujo interno
+//keepCellsIntersectingBoundary 1;
+//checkForGluedMesh 1;
+
+
+
+
+renameBoundary
+{
+    defaultName walls;
+    defaultType wall;
+}
+
+/*
+meshQualitySettings
+{
+    maxNonOrthogonality 65;
+    maxBoundarySkewness 20;
+    maxInternalSkewness 4;
+    minCellVolume 1e-13;
+    minFaceArea 1e-13;
+}
+*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

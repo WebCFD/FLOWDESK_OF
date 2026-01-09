@@ -1,0 +1,78 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      radiationProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+radiation       off;
+
+radiationModel  none;
+
+P1Coeffs
+{
+}
+
+// How often to solve radiation (1 = every timestep, 5-10 = every 5-10 steps for efficiency)
+solverFreq      1;
+
+// ============================================================================
+// VOLUMETRIC PROPERTIES OF THE FLUID MEDIUM
+// These define how the FLUID (air, smoke, etc.) absorbs/emits radiation
+// NOT the walls/surfaces (those are defined in boundary conditions of field G)
+// ============================================================================
+
+absorptionEmissionModel constantAbsorptionEmission;
+
+constantAbsorptionEmissionCoeffs
+{
+    // ========================================================================
+    // CLEAN AIR CONFIGURATION (transparent medium)
+    // Radiation travels between surfaces without volumetric absorption/emission
+    // ========================================================================
+    
+    // Absorption coefficient [1/m]: how much radiation is absorbed per meter of travel
+    absorptivity    absorptivity [0 -1 0 0 0 0 0] 0.0;
+    
+    // Emission coefficient [1/m]: how much the medium emits radiation volumetrically
+    emissivity      emissivity   [0 -1 0 0 0 0 0] 0.0;
+    
+    // Volumetric emission power [W/m³]: additional heat source from radiation
+    E               E            [1 -1 -3 0 0 0 0] 0;
+    
+    // ========================================================================
+    // SMOKE/SOOT CONFIGURATION (participating medium - COMMENTED)
+    // Use this for fire simulations, combustion, or heavy particulates
+    // ========================================================================
+    
+    // For smoke with moderate soot loading:
+    // absorptivity    absorptivity [0 -1 0 0 0 0 0] 2.0;   // 2 m⁻¹ (medium opacity)
+    // emissivity      emissivity   [0 -1 0 0 0 0 0] 2.0;   // Must equal absorptivity (grey gas)
+    // E               E            [1 -1 -3 0 0 0 0] 0;    // Usually 0 unless external source
+    
+    // For heavy smoke/soot:
+    // absorptivity    absorptivity [0 -1 0 0 0 0 0] 10.0;  // 10 m⁻¹ (very opaque)
+    // emissivity      emissivity   [0 -1 0 0 0 0 0] 10.0;
+    
+    // Physical meaning:
+    // - absorptivity = 0: radiation travels freely (clean air, vacuum)
+    // - absorptivity = 2: ~86% of radiation absorbed after 1 meter (e^(-2*1))
+    // - absorptivity = 10: ~99.995% absorbed after 1 meter (very opaque)
+}
+
+// Scattering model (none for air or smoke - scattering negligible in thermal radiation)
+scatterModel    none;
+
+// Soot model (none - not modeling combustion products)
+sootModel       none;
+
+// ************************************************************************* //

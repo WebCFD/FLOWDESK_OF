@@ -1,0 +1,96 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    arch        "LSB;label=32;scalar=64";
+    class       volScalarField;
+    location    "0";
+    object      p_rgh;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [1 -1 -2 0 0 0 0];
+
+internalField   uniform 101325;
+
+boundaryField
+{
+    ceil_0F
+    {
+        type            fixedFluxPressure;
+        gradient        uniform 0;
+        value           uniform 101325;
+    }
+    door_0F_1
+    {
+        type            fixedValue;
+        value           nonuniform List<scalar> 0();
+    }
+    floor_0F
+    {
+        type            fixedFluxPressure;
+        gradient        uniform 0;
+        value           uniform 101325;
+    }
+    wall_0F_1
+    {
+        type            fixedFluxPressure;
+        gradient        uniform 0;
+        value           uniform 101325;
+    }
+    wall_0F_2
+    {
+        type            fixedFluxPressure;
+        gradient        nonuniform List<scalar> 0();
+        value           nonuniform List<scalar> 0();
+    }
+    wall_0F_3
+    {
+        type            fixedFluxPressure;
+        gradient        nonuniform List<scalar> 0();
+        value           nonuniform List<scalar> 0();
+    }
+    wall_0F_4
+    {
+        type            fixedFluxPressure;
+        gradient        nonuniform List<scalar> 0();
+        value           nonuniform List<scalar> 0();
+    }
+    wall_0F_5
+    {
+        type            fixedFluxPressure;
+        gradient        uniform 0;
+        value           uniform 101325;
+    }
+    wall_0F_6
+    {
+        type            fixedFluxPressure;
+        gradient        uniform 0;
+        value           uniform 101325;
+    }
+    window_0F_1
+    {
+        type            fixedValue;
+        value           uniform 101327.5;
+    }
+    window_0F_2
+    {
+        type            fixedValue;
+        value           nonuniform List<scalar> 0();
+    }
+    procBoundary0to1
+    {
+        type            processor;
+        value           uniform 101325;
+    }
+}
+
+
+// ************************************************************************* //

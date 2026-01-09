@@ -1,0 +1,346 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      topoSetDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// ============================================================================
+// REFERENCE GUIDE: topoSet Geometric Primitives
+// Execute with: topoSet
+// Orden: topoSet → crea zones → buoyantPimpleFoam → lee fvOptions que referencia esas zones.
+// Creates cellSets/cellZones for use in fvOptions or postProcessing
+//
+// PATTERN: Always do TWO steps:
+//   1. Create cellSet with geometric primitive
+//   2. Convert cellSet → cellZone with setToCellZone
+// ============================================================================
+
+actions
+(
+    // ========================================================================
+    // PRIMITIVE 1: boxToCell - Rectangular box (axis-aligned)
+    // Use for: Equipment regions, room subdomains, simple occupant volumes
+    // ========================================================================
+    
+    // // Step 1: Create cellSet
+    // {
+    //     name    equipmentCellSet;
+    //     type    cellSet;
+    //     action  new;             // new | add | delete | subset
+    //     source  boxToCell;
+    //     box     (2.0 3.0 0.7)(2.5 3.5 1.1);  // Min(x,y,z) Max(x,y,z)
+    //     
+    //     // Example: Desktop computer 0.5x0.5x0.4m at position (2,3,0.7)
+    // }
+    // 
+    // // Step 2: Convert to cellZone
+    // {
+    //     name    equipment;
+    //     type    cellZoneSet;
+    //     action  new;
+    //     source  setToCellZone;
+    //     set     equipmentCellSet;  // References the cellSet from Step 1
+    // }
+    
+    // ========================================================================
+    // PRIMITIVE 2: cylinderToCell - Cylinder (vertical or arbitrary axis)
+    // Use for: Occupants (standing/seated person), cylindrical equipment, ducts
+    // ========================================================================
+    
+    // // Step 1: Create cellSet
+    // {
+    //     name    occupantCellSet;
+    //     type    cellSet;
+    //     action  new;
+    //     source  cylinderToCell;
+    //     point1  (2.0 2.0 0.0);   // Bottom center of cylinder
+    //     point2  (2.0 2.0 1.8);   // Top center of cylinder (defines axis)
+    //     radius  0.3;             // Cylinder radius in meters
+    //     
+    //     // Example: Standing person (0.3m radius, 1.8m height) at (2,2)
+    //     // Example: Seated person → point1(1.0 1.0 0.4) point2(1.0 1.0 1.2) radius 0.3
+    // }
+    // 
+    // // Step 2: Convert to cellZone
+    // {
+    //     name    occupant1;
+    //     type    cellZoneSet;
+    //     action  new;
+    //     source  setToCellZone;
+    //     set     occupantCellSet;
+    // }
+    
+    // ========================================================================
+    // PRIMITIVE 3: sphereToCell - Sphere
+    // Use for: Point heat sources, localized regions, spherical objects
+    // ========================================================================
+    
+    // // Step 1: Create cellSet
+    // {
+    //     name    heatSourceCellSet;
+    //     type    cellSet;
+    //     action  new;
+    //     source  sphereToCell;
+    //     centre  (2.5 2.5 2.8);   // Center of sphere
+    //     radius  0.2;             // Sphere radius in meters
+    //     
+    //     // Example: Localized heat source (lamp, heater) at ceiling
+    // }
+    // 
+    // // Step 2: Convert to cellZone
+    // {
+    //     name    heatSource;
+    //     type    cellZoneSet;
+    //     action  new;
+    //     source  setToCellZone;
+    //     set     heatSourceCellSet;
+    // }
+    
+    // ========================================================================
+    // PRIMITIVE 4: rotatedBoxToCell - Rotated rectangular box
+    // Use for: Angled equipment, rotated furniture, non-axis-aligned regions
+    // ========================================================================
+    
+    // // Step 1: Create cellSet
+    // {
+    //     name    rotatedEquipmentCellSet;
+    //     type    cellSet;
+    //     action  new;
+    //     source  rotatedBoxToCell;
+    //     origin  (2.0 2.0 0.5);   // Reference point (corner of box)
+    //     i       (0.866 0.5 0.0); // First edge vector (length = box X dimension)
+    //     j       (-0.25 0.433 0); // Second edge vector (length = box Y dimension)
+    //     k       (0.0 0.0 0.8);   // Third edge vector (length = box Z dimension)
+    //     
+    //     // Example: Box rotated 30° around Z-axis, dimensions 1x0.5x0.8m
+    //     // i = (cos(30°), sin(30°), 0) * 1.0 = (0.866, 0.5, 0)
+    //     // j = (-sin(30°), cos(30°), 0) * 0.5 = (-0.25, 0.433, 0)
+    //     // k = (0, 0, 1) * 0.8
+    // }
+    // 
+    // // Step 2: Convert to cellZone
+    // {
+    //     name    rotatedEquipment;
+    //     type    cellZoneSet;
+    //     action  new;
+    //     source  setToCellZone;
+    //     set     rotatedEquipmentCellSet;
+    // }
+    
+    // ========================================================================
+    // PRIMITIVE 5: surfaceToCell - Cells intersected by surface (STL, OBJ)
+    // Use for: Complex geometries imported as surface meshes
+    // ========================================================================
+    
+    // // Step 1: Create cellSet
+    // {
+    //     name    complexObjectCellSet;
+    //     type    cellSet;
+    //     action  new;
+    //     source  surfaceToCell;
+    //     file            "constant/triSurface/furniture.stl";  // Surface file
+    //     outsidePoints   ((0 0 0));   // Point(s) known to be outside
+    //     includeCut      true;        // Include cells cut by surface
+    //     includeInside   true;        // Include cells inside surface
+    //     includeOutside  false;       // Include cells outside surface
+    //     nearDistance    0.01;        // Tolerance for surface proximity
+    //     curvature       0.9;         // Not used, legacy parameter
+    // }
+    // 
+    // // Step 2: Convert to cellZone
+    // {
+    //     name    complexObject;
+    //     type    cellZoneSet;
+    //     action  new;
+    //     source  setToCellZone;
+    //     set     complexObjectCellSet;
+    // }
+    
+    // ========================================================================
+    // PRIMITIVE 6: regionToCell - Connected region from seed point
+    // Use for: Selecting entire rooms, connected domains, fluid regions
+    // ========================================================================
+    
+    // // Step 1: Create cellSet
+    // {
+    //     name    roomCellSet;
+    //     type    cellSet;
+    //     action  new;
+    //     source  regionToCell;
+    //     set         none;            // Starting cellSet (or none)
+    //     nearPoint   (2.5 2.5 1.5);   // Seed point inside target region
+    //     
+    //     // Example: Select all cells in a room by providing point inside it
+    //     // Grows from seed until reaching boundaries
+    // }
+    // 
+    // // Step 2: Convert to cellZone
+    // {
+    //     name    room1;
+    //     type    cellZoneSet;
+    //     action  new;
+    //     source  setToCellZone;
+    //     set     roomCellSet;
+    // }
+    
+    // ========================================================================
+    // PRIMITIVE 7: fieldToCell - Cells where field meets criteria
+    // Use for: Selecting high-temperature regions, high-velocity zones
+    // ========================================================================
+    
+    // // Step 1: Create cellSet
+    // {
+    //     name    highTempCellSet;
+    //     type    cellSet;
+    //     action  new;
+    //     source  fieldToCell;
+    //     field   T;                   // Field name (T, U, p, etc.)
+    //     min     300;                 // Minimum value threshold
+    //     max     400;                 // Maximum value threshold
+    //     
+    //     // Example: Select cells where temperature is between 300-400K
+    //     // Requires field to exist (run after some timesteps)
+    // }
+    // 
+    // // Step 2: Convert to cellZone
+    // {
+    //     name    highTempZone;
+    //     type    cellZoneSet;
+    //     action  new;
+    //     source  setToCellZone;
+    //     set     highTempCellSet;
+    // }
+    
+    
+    // ========================================================================
+    // COMPLETE WORKFLOW EXAMPLE: Multiple occupants + Equipment
+    // ========================================================================
+    
+    // Occupant 1 (standing person at position 2,2)
+    /*
+    {
+        name    occupant1CellSet;
+        type    cellSet;
+        action  new;
+        source  cylinderToCell;
+        point1  (2.0 2.0 0.0);
+        point2  (2.0 2.0 1.8);
+        radius  0.3;
+    }
+    
+    {
+        name    occupants;           // Single zone for all occupants
+        type    cellZoneSet;
+        action  new;
+        source  setToCellZone;
+        set     occupant1CellSet;
+    }
+    */
+    // Occupant 2 (add to same zone)
+    // {
+    //     name    occupant2CellSet;
+    //     type    cellSet;
+    //     action  new;
+    //     source  cylinderToCell;
+    //     point1  (3.5 3.5 0.0);
+    //     point2  (3.5 3.5 1.8);
+    //     radius  0.3;
+    // }
+    // 
+    // {
+    //     name    occupants;           // Add to existing zone
+    //     type    cellZoneSet;
+    //     action  add;                 // ADD not new!
+    //     source  setToCellZone;
+    //     set     occupant2CellSet;
+    // }
+    
+    // Equipment (desktop computer)
+    /*
+    {
+        name    equipmentCellSet;
+        type    cellSet;
+        action  new;
+        source  boxToCell;
+        box     (3.0 3.0 0.7)(3.5 3.5 1.1);
+    }
+    
+    {
+        name    equipment;
+        type    cellZoneSet;
+        action  new;
+        source  setToCellZone;
+        set     equipmentCellSet;
+    }
+    */
+    
+    // ========================================================================
+    // ADVANCED: Boolean operations on cellSets before converting to zones
+    // ========================================================================
+    
+    // Create box 1
+    // {
+    //     name    box1CellSet;
+    //     type    cellSet;
+    //     action  new;
+    //     source  boxToCell;
+    //     box     (0 0 0)(2 2 2);
+    // }
+    
+    // Create box 2
+    // {
+    //     name    box2CellSet;
+    //     type    cellSet;
+    //     action  new;
+    //     source  boxToCell;
+    //     box     (1 1 1)(3 3 3);
+    // }
+    
+    // UNION: box1 = box1 + box2
+    // {
+    //     name    box1CellSet;      // Modify box1
+    //     type    cellSet;
+    //     action  add;              // Add box2 to box1
+    //     source  cellToCell;
+    //     set     box2CellSet;
+    // }
+    
+    // SUBTRACTION: box1 = box1 - box2
+    // {
+    //     name    box1CellSet;      // Modify box1
+    //     type    cellSet;
+    //     action  delete;           // Remove box2 from box1
+    //     source  cellToCell;
+    //     set     box2CellSet;
+    // }
+    
+    // INTERSECTION: box1 = box1 ∩ box2
+    // {
+    //     name    box1CellSet;      // Modify box1
+    //     type    cellSet;
+    //     action  subset;           // Keep only overlap
+    //     source  cellToCell;
+    //     set     box2CellSet;
+    // }
+    
+    // Finally convert result to zone
+    // {
+    //     name    combinedZone;
+    //     type    cellZoneSet;
+    //     action  new;
+    //     source  setToCellZone;
+    //     set     box1CellSet;      // The modified cellSet
+    // }
+);
+
+// ************************************************************************* //

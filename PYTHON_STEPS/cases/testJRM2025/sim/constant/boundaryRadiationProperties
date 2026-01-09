@@ -1,0 +1,32 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      boundaryRadiationProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Default radiation properties for all boundary patches
+// Using wildcard pattern ".*" to apply to all patches
+// TODO (FUTURE): Define patch-specific properties from JSON input
+
+".*"
+{
+    type            opaqueDiffusive;
+    wallAbsorptionEmissionModel
+    {
+        type            constantAbsorption;
+        absorptivity    0.9;
+        emissivity      0.9;
+    }
+}
+
+// ************************************************************************* //

@@ -1,0 +1,25 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _f00230df-20250528 OPENFOAM=2412 patch=250528 version=2412
+Arch   : "LSB;label=32;scalar=64"
+Exec   : surfaceFeatureEdges -angle 10 constant/triSurface/geometry.stl constant/triSurface/geometry.fms
+Date   : Jan 09 2026
+Time   : 22:46:46
+Host   : plprm-HPEliteDesk
+PID    : 19244
+I/O    : uncollated
+Case   : /home/plprm/FLOWDESK_OF/PYTHON_STEPS/cases/testJRM2025/sim
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Writing : "constant/triSurface/geometry.fms"
+End
+

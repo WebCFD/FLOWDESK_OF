@@ -1,0 +1,175 @@
+#!/bin/sh
+cd "${0%/*}" || exit
+. ${WM_PROJECT_DIR:?}/bin/tools/RunFunctions
+decompDict="-decomposeParDict system/decomposeParDict"
+echo "==================== GENERATING FMS WITH FEATURE EDGES ===================="
+runApplication surfaceFeatureEdges -angle 10 constant/triSurface/geometry.stl constant/triSurface/geometry.fms
+echo "==================== EXPORTING FEATURE EDGES TO VTK ===================="
+echo "Using FMSToSurface to export feature edges for ParaView visualization..."
+FMSToSurface constant/triSurface/geometry.fms constant/triSurface/edges_temp.vtk -exportFeatureEdges
+if [ -f "constant/triSurface/edges_temp_featureEdges.vtk" ]; then
+    mv constant/triSurface/edges_temp_featureEdges.vtk constant/triSurface/geometry_edges.vtk
+    echo "✓ Feature edges exported to: constant/triSurface/geometry_edges.vtk"
+else
+    echo "⚠ Warning: Feature edges export may have failed"
+fi
+echo "==================== RUNNING CFMESH CARTESIAN MESHER ===================="
+echo "cfMesh configuration:"
+echo "  - Adaptive base cell size from geometry"
+echo "  - Pressure boundaries: 2x fine refinement, 8 regular prism layers"
+echo "  - Wall boundaries: 1.5x fine refinement, 6 regular prism layers"
+echo "  - Boundary layer optimization: enabled"
+echo "  - Geometry constraint enforcement: enabled"
+echo ""
+runApplication cartesianMesh
+echo "==================== DETECTING MESH LOCATION ===================="
+if [ -d "constant/polyMesh" ]; then
+    MESH_LOCATION="constant"
+    echo "✓ Mesh found in SERIAL location: constant/polyMesh"
+elif [ -d "processor0/constant/polyMesh" ]; then
+    MESH_LOCATION="processor0/constant"
+    echo "✓ Mesh found in PARALLEL location: processor0/constant/polyMesh"
+else
+    echo "✗ ERROR: Mesh not found in constant/polyMesh or processor0/constant/polyMesh"
+    exit 1
+fi
+echo "==================== VALIDATING MESH ===================="
+python3 << 'VALIDATION_EOF'
+import re, os
+mesh_location = open('/tmp/mesh_location.txt').read().strip()
+boundary_file = f'{mesh_location}/polyMesh/boundary'
+with open(boundary_file, 'r') as f:
+    content = f.read()
+patches = {}
+lines = content.split('\n')
+current_patch = None
+for i, line in enumerate(lines):
+    if re.match(r'^\s+(\w+)\s*$', line):
+        current_patch = line.strip()
+    elif current_patch and 'nFaces' in line:
+        match = re.search(r'nFaces\s+(\d+)', line)
+        if match:
+            patches[current_patch] = int(match.group(1))
+            current_patch = None
+background_patches = ['limits', 'defaultFaces', 'background']
+expected_patches = ['wall_0F_1', 'door_0F_1', 'wall_0F_2', 'window_0F_2', 'wall_0F_3', 'wall_0F_4', 'wall_0F_5', 'wall_0F_6', 'window_0F_1', 'floor_0F', 'ceil_0F']
+failed = [(p, patches[p]) for p in patches if p in background_patches and patches[p] > 0]
+if failed:
+    print('\n' + '='*80)
+    print('MESHING ERROR: cfMesh failed to cut geometry properly!')
+    print('='*80)
+    print('Background patches remain in the mesh:')
+    for patch, count in failed:
+        print(f'  - {patch}: {count} faces')
+    print()
+    print('This indicates the geometry is NOT WATERTIGHT (has holes/gaps).')
+    print('Possible causes:')
+    print('  1. Geometry has holes, gaps, or non-manifold surfaces')
+    print('  2. Wall extrusion created invalid 3D geometry')
+    print('  3. Boolean operations failed to create closed volume')
+    print()
+    print('Expected patches: wall_0F_1, door_0F_1, wall_0F_2, window_0F_2, wall_0F_3, wall_0F_4, wall_0F_5, wall_0F_6, window_0F_1, floor_0F, ceil_0F')
+    print(f'Actual patches: {", ".join(patches.keys())}')
+    print('='*80 + '\n')
+    exit(1)
+print('✅ Mesh validation passed - no background patches found')
+print(f'Valid patches: {", ".join(patches.keys())}')
+VALIDATION_EOF
+echo "==================== MESH VALIDATION PASSED ===================="
+runApplication checkMesh
+rm -rf 0
+cp -r 0.orig 0
+echo "==================== COPYING MESH TO STANDARD LOCATION ===================="
+if [ "$MESH_LOCATION" != "constant" ]; then
+    echo "Copying mesh from $MESH_LOCATION/polyMesh to constant/polyMesh"
+    rm -rf constant/polyMesh
+    cp -r $MESH_LOCATION/polyMesh constant/
+fi
+echo "==================== INITIAL CONDITIONS CHECK ===================="
+echo ""
+echo "--- Checking h (enthalpy) ---"
+grep "internalField" 0/h
+echo ""
+echo "h boundary conditions:"
+head -n 50 0/h | grep -A 2 "type"
+echo ""
+echo "--- Checking thermophysicalProperties ---"
+grep -A 15 "mixture" constant/thermophysicalProperties
+echo ""
+echo "==================== END INITIAL CONDITIONS CHECK ===================="
+echo ""
+touch results.foam
+echo "==================== COPYING INITIAL CONDITIONS FROM 0.orig TO 0 ===================="
+rm -rf 0
+cp -r 0.orig 0
+echo "==================== INITIAL CONDITIONS COPIED ===================="
+echo "==================== APPLYING HYDROSTATIC PRESSURE GRADIENT ===================="
+runApplication setFields
+echo "==================== HYDROSTATIC PRESSURE INITIALIZED: p(z) = p_atm - rho*g*z ===================="
+echo "==================== GENERATING VTK FOR TIME 0 (INITIAL STATE) ===================="
+foamToVTK -time 0 -fields "(T U p p_rgh h)" 2>&1 | tee log.foamToVTK_time0
+echo "==================== TIME 0 VTK COMPLETED ===================="
+rm -rf processor*
+runApplication decomposePar
+echo "==================== DEBUG: Copying processor0 files ===================="
+mkdir -p debug_files
+cp processor0/0/h debug_files/processor0_h
+cp processor0/0/U debug_files/processor0_U
+cp processor0/0/p_rgh debug_files/processor0_p_rgh
+cp processor0/constant/thermophysicalProperties debug_files/processor0_thermo
+echo "==================== DEBUG FILES COPIED ===================="
+echo "=========================================================================="
+echo "TRANSIENT SOLVER: 3-PHASE PROGRESSIVE CFL STRATEGY"
+echo "Phase 1: Timesteps 0-100 (CFL=0.1) - Conservative start-up"
+echo "Phase 2: Timesteps 100-400 (CFL=0.5) - Transition ramp-up"
+echo "Phase 3: Timesteps 400+ (CFL=0.8) - Normal operation"
+echo "=========================================================================="
+
+echo "==================== PHASE 1: CONSERVATIVE START-UP ===================="
+echo "Configuring: maxCo=0.1, maxAlphaCo=0.1, endTime=100"
+foamDictionary system/controlDict -entry maxCo -set 0.1
+foamDictionary system/controlDict -entry maxAlphaCo -set 0.1
+foamDictionary system/controlDict -entry writeControl -set timeStep
+foamDictionary system/controlDict -entry writeInterval -set 20
+foamDictionary system/controlDict -entry endTime -set 100
+echo "Starting buoyantPimpleFoam Phase 1..."
+runParallel -np 3 buoyantPimpleFoam -parallel 2>&1 | tee -a log.buoyantPimpleFoam
+echo "==================== PHASE 1 COMPLETED ===================="
+
+echo "==================== PHASE 2: TRANSITION RAMP-UP ===================="
+echo "Configuring: maxCo=0.5, maxAlphaCo=0.5, timesteps 100-400"
+foamDictionary system/controlDict -entry maxCo -set 0.5
+foamDictionary system/controlDict -entry maxAlphaCo -set 0.5
+foamDictionary system/controlDict -entry startTime -set latestTime
+foamDictionary system/controlDict -entry endTime -set 400
+foamDictionary system/controlDict -entry writeInterval -set 50
+echo "Continuing buoyantPimpleFoam Phase 2 from latest time..."
+runParallel -np 3 buoyantPimpleFoam -parallel 2>&1 | tee -a log.buoyantPimpleFoam
+echo "==================== PHASE 2 COMPLETED ===================="
+
+echo "==================== PHASE 3: NORMAL OPERATION ===================="
+echo "Configuring: maxCo=0.8, maxAlphaCo=0.8, timesteps 400-1000"
+foamDictionary system/controlDict -entry maxCo -set 0.8
+foamDictionary system/controlDict -entry maxAlphaCo -set 0.8
+foamDictionary system/controlDict -entry startTime -set latestTime
+foamDictionary system/controlDict -entry endTime -set 1000
+foamDictionary system/controlDict -entry writeInterval -set 100
+echo "Continuing buoyantPimpleFoam Phase 3 from latest time..."
+runParallel -np 3 buoyantPimpleFoam -parallel 2>&1 | tee -a log.buoyantPimpleFoam
+echo "==================== PHASE 3 COMPLETED ===================="
+echo "=========================================================================="
+echo "ALL 3 PHASES COMPLETED SUCCESSFULLY"
+echo "=========================================================================="
+echo "==================== RECONSTRUCTING ALL ITERATIONS ===================="
+runApplication reconstructPar
+echo "==================== RECONSTRUCTION COMPLETED ===================="
+echo "==================== CALCULATING PMV/PPD THERMAL COMFORT ===================="
+python3 ./calculate_comfort.py . 2>&1 | tee log.comfort
+echo "==================== PMV/PPD CALCULATION COMPLETED ===================="
+echo "==================== GENERATING VTK FOR ALL ITERATIONS ===================="
+runApplication foamToVTK -fields "(T U p p_rgh PMV PPD)" -excludePatches "(.*_master|.*_slave)"
+echo "==================== VTK GENERATION COMPLETED ===================="
+echo "==================== GENERATING SURFACE VTK (QUICK PREVIEW) ===================="
+foamToVTK -latestTime -surfaceFields -fields "(T U p p_rgh PMV PPD)" 2>&1 | tee log.foamToVTK_surface
+echo "==================== SURFACE VTK COMPLETED ===================="
+rm -rf processor*

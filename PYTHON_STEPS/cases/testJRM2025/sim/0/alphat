@@ -1,0 +1,92 @@
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class volScalarField;    location "0.orig";
+    object alphat;
+}
+
+dimensions [1 -1 -1 0 0 0 0];
+
+internalField uniform 0.028;
+
+boundaryField
+{
+    wall_0F_1
+    {
+    
+        type compressible::alphatWallFunction;
+    
+        value uniform 0.028;
+    }
+    door_0F_1
+    {
+    
+        type calculated;
+    
+        value uniform 0.028;
+    }
+    wall_0F_2
+    {
+    
+        type compressible::alphatWallFunction;
+    
+        value uniform 0.028;
+    }
+    window_0F_2
+    {
+    
+        type calculated;
+    
+        value uniform 0.028;
+    }
+    wall_0F_3
+    {
+    
+        type compressible::alphatWallFunction;
+    
+        value uniform 0.028;
+    }
+    wall_0F_4
+    {
+    
+        type compressible::alphatWallFunction;
+    
+        value uniform 0.028;
+    }
+    wall_0F_5
+    {
+    
+        type compressible::alphatWallFunction;
+    
+        value uniform 0.028;
+    }
+    wall_0F_6
+    {
+    
+        type compressible::alphatWallFunction;
+    
+        value uniform 0.028;
+    }
+    window_0F_1
+    {
+    
+        type calculated;
+    
+        value uniform 0.028;
+    }
+    floor_0F
+    {
+    
+        type compressible::alphatWallFunction;
+    
+        value uniform 0.028;
+    }
+    ceil_0F
+    {
+    
+        type compressible::alphatWallFunction;
+    
+        value uniform 0.028;
+    }
+}

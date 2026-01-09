@@ -494,18 +494,33 @@ def main():
             shutil.copy(stl_file, sim_stl_file)
             log_print(f"✓ Geometría copiada a: {sim_stl_file}")
         
-        # En modo mesh-only, ejecutar Allrun para generar la malla con cfMesh
-        if EXECUTION_MODE == "mesh-only":
+        # Ejecutar Allrun según el modo: mesh-only (solo malla) o full (malla + CFD)
+        if EXECUTION_MODE in ["mesh-only", "full"]:
+            mode_description = "CFMESH (Allrun)" if EXECUTION_MODE == "mesh-only" else "SIMULACIÓN CFD COMPLETA (Allrun)"
             log_print("\n" + "="*70)
-            log_print("EJECUTANDO CFMESH (Allrun)")
+            log_print(f"EJECUTANDO {mode_description}")
             log_print("="*70 + "\n")
             
             sim_path = os.path.join(case_path, "sim")
             allrun_path = os.path.join(sim_path, "Allrun")
             
             if os.path.exists(allrun_path):
-                log_print(f"🔄 Ejecutando: {allrun_path}")
-                log_print("   Esto generará la malla con cfMesh...\n")
+                if EXECUTION_MODE == "mesh-only":
+                    log_print(f"🔄 Ejecutando: {allrun_path}")
+                    log_print("   Esto generará la malla con cfMesh...\n")
+                else:  # full mode
+                    log_print(f"🔄 Ejecutando: {allrun_path}")
+                    log_print("   Pipeline completo:")
+                    log_print("   1. cfMesh (genera malla)")
+                    log_print("   2. setFields (gradiente hidrostático)")
+                    log_print("   3. decomposePar (prepara paralelo)")
+                    log_print("   4. buoyantPimpleFoam Fase 1 (CFL=0.1, timesteps 0-100)")
+                    log_print("   5. buoyantPimpleFoam Fase 2 (CFL=0.5, timesteps 100-400)")
+                    log_print("   6. buoyantPimpleFoam Fase 3 (CFL=0.8, timesteps 400-1000)")
+                    log_print("   7. reconstructPar (reconstruye malla)")
+                    log_print("   8. PMV/PPD comfort calculation")
+                    log_print("   9. foamToVTK (genera visualización)")
+                    log_print("\n   ⏱️  Esto puede tomar varios minutos...\n")
                 
                 try:
                     import subprocess
@@ -514,32 +529,66 @@ def main():
                     cmd = f"bash -c 'source /usr/lib/openfoam/openfoam2412/etc/bashrc && cd {sim_path} && ./Allrun'"
                     result = subprocess.run(cmd, shell=True, capture_output=True, text=True, executable="/bin/bash", encoding='utf-8', errors='replace')
                     
-                    # Verificar que se generó polyMesh
-                    polymesh_path = os.path.join(sim_path, "constant", "polyMesh")
-                    if os.path.exists(polymesh_path):
-                        points_file = os.path.join(polymesh_path, "points")
-                        if os.path.exists(points_file):
-                            log_print("✅ cfMesh ejecutado exitosamente")
-                            log_print("   Malla generada en: constant/polyMesh/")
-                            log_print(f"   ✓ Archivo points encontrado")
+                    if EXECUTION_MODE == "mesh-only":
+                        # Verificar que se generó polyMesh
+                        polymesh_path = os.path.join(sim_path, "constant", "polyMesh")
+                        if os.path.exists(polymesh_path):
+                            points_file = os.path.join(polymesh_path, "points")
+                            if os.path.exists(points_file):
+                                log_print("✅ cfMesh ejecutado exitosamente")
+                                log_print("   Malla generada en: constant/polyMesh/")
+                                log_print(f"   ✓ Archivo points encontrado")
+                            else:
+                                log_print("⚠️  polyMesh creado pero sin archivo points")
+                                if result.stderr:
+                                    log_print(f"   Stderr: {result.stderr[:300]}")
                         else:
-                            log_print("⚠️  polyMesh creado pero sin archivo points")
+                            log_print(f"❌ cfMesh NO generó polyMesh")
+                            log_print(f"   Return code: {result.returncode}")
                             if result.stderr:
-                                log_print(f"   Stderr: {result.stderr[:300]}")
-                    else:
-                        log_print(f"❌ cfMesh NO generó polyMesh")
-                        log_print(f"   Return code: {result.returncode}")
-                        if result.stderr:
-                            log_print(f"   Stderr: {result.stderr[:500]}")
-                        if result.stdout:
-                            # Mostrar últimas líneas del stdout para ver dónde falló
-                            stdout_lines = result.stdout.split('\n')
-                            log_print(f"   Últimas líneas de output:")
-                            for line in stdout_lines[-10:]:
-                                if line.strip():
-                                    log_print(f"     {line}")
+                                log_print(f"   Stderr: {result.stderr[:500]}")
+                            if result.stdout:
+                                # Mostrar últimas líneas del stdout para ver dónde falló
+                                stdout_lines = result.stdout.split('\n')
+                                log_print(f"   Últimas líneas de output:")
+                                for line in stdout_lines[-10:]:
+                                    if line.strip():
+                                        log_print(f"     {line}")
+                    else:  # full mode
+                        # Verificar que completó exitosamente
+                        if result.returncode == 0:
+                            log_print("\n" + "="*70)
+                            log_print("✅ SIMULACIÓN CFD COMPLETADA EXITOSAMENTE")
+                            log_print("="*70)
+                            
+                            # Verificar resultados generados
+                            vtk_dir = os.path.join(sim_path, "VTK")
+                            if os.path.exists(vtk_dir):
+                                log_print(f"\n📊 Resultados VTK generados en: {vtk_dir}")
+                                vtk_subdirs = [d for d in os.listdir(vtk_dir) if os.path.isdir(os.path.join(vtk_dir, d))]
+                                log_print(f"   Timesteps exportados: {len(vtk_subdirs)}")
+                            
+                            # Verificar logs
+                            log_foam = os.path.join(sim_path, "log.buoyantPimpleFoam")
+                            if os.path.exists(log_foam):
+                                log_print(f"\n📝 Log de simulación: {log_foam}")
+                            
+                            log_print(f"\n📁 Resultados completos en: {sim_path}/")
+                        else:
+                            log_print(f"\n❌ Error en simulación CFD (return code: {result.returncode})")
+                            if result.stderr:
+                                log_print(f"   Stderr (primeros 1000 chars):")
+                                log_print(f"   {result.stderr[:1000]}")
+                            if result.stdout:
+                                stdout_lines = result.stdout.split('\n')
+                                log_print(f"\n   Últimas 20 líneas de output:")
+                                for line in stdout_lines[-20:]:
+                                    if line.strip():
+                                        log_print(f"     {line}")
                 except Exception as e:
-                    log_print(f"❌ Error al ejecutar Allrun: {str(e)}")
+                    log_print(f"❌ Error ejecutando Allrun: {str(e)}")
+                    import traceback
+                    log_print(traceback.format_exc())
             else:
                 log_print(f"⚠️  Archivo Allrun no encontrado en: {allrun_path}")
         

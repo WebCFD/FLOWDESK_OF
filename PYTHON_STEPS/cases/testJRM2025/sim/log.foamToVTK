@@ -1,0 +1,39 @@
+--> FOAM IOWarning :
+    Found [v2112] '-excludePatches' instead of '-exclude-patches' option
+
+    This option is 36 months old.
+
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _f00230df-20250528 OPENFOAM=2412 patch=250528 version=2412
+Arch   : "LSB;label=32;scalar=64"
+Exec   : foamToVTK -fields (T U p p_rgh PMV PPD) -exclude-patches (.*_master|.*_slave)
+Date   : Jan 09 2026
+Time   : 22:47:34
+Host   : plprm-HPEliteDesk
+PID    : 20213
+I/O    : uncollated
+Case   : /home/plprm/FLOWDESK_OF/PYTHON_STEPS/cases/testJRM2025/sim
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+
+--> FOAM FATAL IO ERROR: (openfoam-2412 patch=250528)
+Wrong token type - expected word or string, found on line 0: punctuation '('
+
+file: input at line 0.
+
+    From Foam::Istream& Foam::operator>>(Foam::Istream&, Foam::wordRe&)
+    in file primitives/strings/wordRe/wordRe.C at line 121.
+
+FOAM exiting
+

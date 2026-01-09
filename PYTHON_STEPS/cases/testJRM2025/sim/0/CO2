@@ -1,0 +1,82 @@
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class volScalarField;    location "0.orig";
+    object CO2;
+}
+
+dimensions [0 0 0 0 0 0 0];
+
+internalField uniform 0.0004;
+
+boundaryField
+{
+    wall_0F_1
+    {
+    
+        type zeroGradient;
+    }
+    door_0F_1
+    {
+    
+        type inletOutlet;
+    
+        inletValue uniform 0.0004;
+    
+        value uniform 0.0004;
+    }
+    wall_0F_2
+    {
+    
+        type zeroGradient;
+    }
+    window_0F_2
+    {
+    
+        type inletOutlet;
+    
+        inletValue uniform 0.0004;
+    
+        value uniform 0.0004;
+    }
+    wall_0F_3
+    {
+    
+        type zeroGradient;
+    }
+    wall_0F_4
+    {
+    
+        type zeroGradient;
+    }
+    wall_0F_5
+    {
+    
+        type zeroGradient;
+    }
+    wall_0F_6
+    {
+    
+        type zeroGradient;
+    }
+    window_0F_1
+    {
+    
+        type inletOutlet;
+    
+        inletValue uniform 0.0004;
+    
+        value uniform 0.0004;
+    }
+    floor_0F
+    {
+    
+        type zeroGradient;
+    }
+    ceil_0F
+    {
+    
+        type zeroGradient;
+    }
+}

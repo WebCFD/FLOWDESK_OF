@@ -1,0 +1,86 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      fvSchemes;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+ddtSchemes
+{
+    default         backward;  // 2nd order implicit for transient
+}
+
+gradSchemes
+{
+    default         cellLimited Gauss linear 0.5;
+    grad(U)         cellLimited Gauss linear 1;
+}
+
+divSchemes
+{
+    default                         none;
+
+    // ============================================================
+    // ULTRA-STABLE CONFIGURATION (1st order, highly diffusive)
+    // Use for initial convergence and problematic cases
+    // ============================================================
+    
+    // Momentum: upwind (1st order, maximum stability)
+    div(phi,U)                      Gauss upwind;
+    // HIGH ACCURACY: div(phi,U)    Gauss linearUpwind grad(U);
+    
+    // Energy: upwind (prevents temperature oscillations)
+    div(phi,h)                      Gauss upwind;
+    // HIGH ACCURACY: div(phi,h)    Gauss limitedLinear 1;
+    
+    // Turbulence: upwind (ensures k,omega > 0 always)
+    div(phi,k)                      Gauss upwind;
+    div(phi,omega)                  Gauss upwind;
+    div(phi,epsilon)                Gauss upwind;
+    // HIGH ACCURACY: div(phi,k)        Gauss limitedLinear 1;
+    // HIGH ACCURACY: div(phi,omega)    Gauss limitedLinear 1;
+    // HIGH ACCURACY: div(phi,epsilon)  Gauss limitedLinear 1;
+    
+    div(phi,K)                      Gauss upwind;
+
+    // Turbulent diffusion
+    div(((rho*nuEff)*dev2(T(grad(U))))) Gauss linear;
+    
+    // Scalar transport (CO2): upwind for maximum boundedness
+    div(phi,CO2)                    Gauss upwind;
+    // HIGH ACCURACY: div(phi,CO2)  Gauss limitedLinear 1;
+    
+    // Age of air: upwind (strict positivity required)
+    div(phi,age)                    Gauss upwind;
+}
+
+laplacianSchemes
+{
+    default         Gauss linear limited 0.5;
+}
+
+interpolationSchemes
+{
+    default         linear;
+}
+
+snGradSchemes
+{
+    default         limited 0.5;
+}
+
+wallDist
+{
+    method meshWave;
+}
+
+// ************************************************************************* //

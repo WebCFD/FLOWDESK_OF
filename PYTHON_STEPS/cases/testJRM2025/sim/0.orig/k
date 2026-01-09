@@ -1,0 +1,98 @@
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class volScalarField;    location "0.orig";
+    object k;
+}
+
+dimensions [0 2 -2 0 0 0 0];
+
+internalField uniform 0.01;
+
+boundaryField
+{
+    wall_0F_1
+    {
+    
+        type kqRWallFunction;
+    
+        value uniform 0.01;
+    }
+    door_0F_1
+    {
+    
+        type inletOutlet;
+    
+        inletValue uniform 0.01;
+    
+        value uniform 0.01;
+    }
+    wall_0F_2
+    {
+    
+        type kqRWallFunction;
+    
+        value uniform 0.01;
+    }
+    window_0F_2
+    {
+    
+        type inletOutlet;
+    
+        inletValue uniform 0.01;
+    
+        value uniform 0.01;
+    }
+    wall_0F_3
+    {
+    
+        type kqRWallFunction;
+    
+        value uniform 0.01;
+    }
+    wall_0F_4
+    {
+    
+        type kqRWallFunction;
+    
+        value uniform 0.01;
+    }
+    wall_0F_5
+    {
+    
+        type kqRWallFunction;
+    
+        value uniform 0.01;
+    }
+    wall_0F_6
+    {
+    
+        type kqRWallFunction;
+    
+        value uniform 0.01;
+    }
+    window_0F_1
+    {
+    
+        type inletOutlet;
+    
+        inletValue uniform 0.01;
+    
+        value uniform 0.01;
+    }
+    floor_0F
+    {
+    
+        type kqRWallFunction;
+    
+        value uniform 0.01;
+    }
+    ceil_0F
+    {
+    
+        type kqRWallFunction;
+    
+        value uniform 0.01;
+    }
+}

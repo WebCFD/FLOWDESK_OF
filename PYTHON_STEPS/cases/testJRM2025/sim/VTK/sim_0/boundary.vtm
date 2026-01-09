@@ -1,0 +1,24 @@
+<?xml version='1.0'?>
+<!-- time='0' -->
+<VTKFile type='vtkMultiBlockDataSet' version='1.0' byte_order='LittleEndian' header_type='UInt64'>
+  <vtkMultiBlockDataSet>
+    <Block name='boundary'>
+      <DataSet name='ceil_0F' file='boundary/ceil_0F.vtp' />
+      <DataSet name='door_0F_1' file='boundary/door_0F_1.vtp' />
+      <DataSet name='floor_0F' file='boundary/floor_0F.vtp' />
+      <DataSet name='wall_0F_1' file='boundary/wall_0F_1.vtp' />
+      <DataSet name='wall_0F_2' file='boundary/wall_0F_2.vtp' />
+      <DataSet name='wall_0F_3' file='boundary/wall_0F_3.vtp' />
+      <DataSet name='wall_0F_4' file='boundary/wall_0F_4.vtp' />
+      <DataSet name='wall_0F_5' file='boundary/wall_0F_5.vtp' />
+      <DataSet name='wall_0F_6' file='boundary/wall_0F_6.vtp' />
+      <DataSet name='window_0F_1' file='boundary/window_0F_1.vtp' />
+      <DataSet name='window_0F_2' file='boundary/window_0F_2.vtp' />
+    </Block>
+  </vtkMultiBlockDataSet>
+  <FieldData>
+    <DataArray type='Float32' Name='TimeValue' NumberOfTuples='1' format='ascii'>
+0
+    </DataArray>
+  </FieldData>
+</VTKFile>

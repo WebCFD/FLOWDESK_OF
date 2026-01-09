@@ -4,10 +4,15 @@ import pandas as pd
 import pyvista as pv
 import multiprocessing
 import logging
+from pathlib import Path
 
 from src.components.tools.populate_template_file import replace_in_file
 
 logger = logging.getLogger(__name__)
+
+# Calculate project root: 4 levels up from this file
+# src/components/mesh/cfmesh.py -> src/components/mesh/ -> src/components/ -> src/ -> FLOWDESK_OF/
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 
 def create_surfaceFeatureExtractDict(template_path, sim_path, stl_filename):
@@ -338,7 +343,8 @@ def prepare_cfmesh(geo_mesh, sim_path, geo_df, fms_filename="geometry.fms"):
     logger.info(f"    * Exporting geometry to STL format: {fms_filename}")
     stl_filename = export_to_fms(geo_mesh_dict, sim_path, fms_filename)
     
-    template_path = os.path.join(os.getcwd(), "data", "settings", "mesh", "cfmesh")
+    # Use PROJECT_ROOT for robust path resolution (independent of execution directory)
+    template_path = str(PROJECT_ROOT / "data" / "settings" / "mesh" / "cfmesh")
     logger.info(f"    * Creating cfMesh configuration files from template: {template_path}")
     
     logger.info("    * Creating meshDict with optimized settings")

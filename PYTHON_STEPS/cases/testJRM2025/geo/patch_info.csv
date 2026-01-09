@@ -1,0 +1,12 @@
+id,type,T,open,pressure,U,nx,ny,nz
+wall_0F_1,wall,20,,,,,,
+door_0F_1,pressure_outlet,20,True,-2.5,,0.0,1.0,0.0
+wall_0F_2,wall,20,,,,,,
+window_0F_2,pressure_inlet,20,True,2.5,,-0.677681028842926,-0.7353559732437134,0.0
+wall_0F_3,wall,20,,,,,,
+wall_0F_4,wall,20,,,,,,
+wall_0F_5,wall,20,,,,,,
+wall_0F_6,wall,20,,,,,,
+window_0F_1,pressure_inlet,20,True,2.5,,1.0,0.0,0.0
+floor_0F,wall,20,,,,,,
+ceil_0F,wall,20,,,,,,

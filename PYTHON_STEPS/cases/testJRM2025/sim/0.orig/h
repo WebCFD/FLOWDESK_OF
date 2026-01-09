@@ -1,0 +1,92 @@
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class volScalarField;    location "0.orig";
+    object h;
+}
+
+dimensions [0 2 -2 0 0 0 0];
+
+internalField uniform 294515.75;
+
+boundaryField
+{
+    wall_0F_1
+    {
+    
+        type calculated;
+    
+        value uniform 294515.75;
+    }
+    door_0F_1
+    {
+    
+        type calculated;
+    
+        value uniform 294515.75;
+    }
+    wall_0F_2
+    {
+    
+        type calculated;
+    
+        value uniform 294515.75;
+    }
+    window_0F_2
+    {
+    
+        type calculated;
+    
+        value uniform 294515.75;
+    }
+    wall_0F_3
+    {
+    
+        type calculated;
+    
+        value uniform 294515.75;
+    }
+    wall_0F_4
+    {
+    
+        type calculated;
+    
+        value uniform 294515.75;
+    }
+    wall_0F_5
+    {
+    
+        type calculated;
+    
+        value uniform 294515.75;
+    }
+    wall_0F_6
+    {
+    
+        type calculated;
+    
+        value uniform 294515.75;
+    }
+    window_0F_1
+    {
+    
+        type calculated;
+    
+        value uniform 294515.75;
+    }
+    floor_0F
+    {
+    
+        type calculated;
+    
+        value uniform 294515.75;
+    }
+    ceil_0F
+    {
+    
+        type calculated;
+    
+        value uniform 294515.75;
+    }
+}

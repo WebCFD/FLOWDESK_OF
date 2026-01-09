@@ -1,0 +1,102 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    arch        "LSB;label=32;scalar=64";
+    class       polyBoundaryMesh;
+    location    "constant/polyMesh";
+    object      boundary;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+
+11
+(
+ceil_0F
+{
+    type wall;
+    nFaces 6960;
+    startFace 775872;
+}
+
+door_0F_1
+{
+    type wall;
+    nFaces 478;
+    startFace 782832;
+}
+
+floor_0F
+{
+    type wall;
+    nFaces 6960;
+    startFace 783310;
+}
+
+wall_0F_1
+{
+    type wall;
+    nFaces 4428;
+    startFace 790270;
+}
+
+wall_0F_2
+{
+    type wall;
+    nFaces 2958;
+    startFace 794698;
+}
+
+wall_0F_3
+{
+    type wall;
+    nFaces 1482;
+    startFace 797656;
+}
+
+wall_0F_4
+{
+    type wall;
+    nFaces 2014;
+    startFace 799138;
+}
+
+wall_0F_5
+{
+    type wall;
+    nFaces 1862;
+    startFace 801152;
+}
+
+wall_0F_6
+{
+    type wall;
+    nFaces 3436;
+    startFace 803014;
+}
+
+window_0F_1
+{
+    type wall;
+    nFaces 64;
+    startFace 806450;
+}
+
+window_0F_2
+{
+    type wall;
+    nFaces 88;
+    startFace 806514;
+}
+
+)
+
+
+// ************************************************************************* //
