@@ -25,7 +25,7 @@ def run(case_name: str, type: str, mesh_script: list = [], simulation_type: str 
         type: Type of CFD simulation ("hvac" or other supported types)
         mesh_script: List of mesh generation script commands
         simulation_type: Simulation iteration type (comfortTest=3 iter, comfort30Iter=30 iter)
-        transient: If True, use buoyantPimpleFoam (transient RANS). If False, use buoyantSimpleFoam (steady laminar)
+        transient: If True, use buoyantPimpleFoam (transient thermal). If False, use buoyantSimpleFoam (steady laminar)
         
     Returns:
         None

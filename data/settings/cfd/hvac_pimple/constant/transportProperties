@@ -1,0 +1,13 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      transportProperties;
+}
+
+// Transport properties for pimpleFoam (incompressible isothermal)
+
+transportModel  Newtonian;
+
+nu              1.5e-05;  // Kinematic viscosity [m²/s] for air at 20°C (ν = μ/ρ = 1.81e-5 / 1.2)

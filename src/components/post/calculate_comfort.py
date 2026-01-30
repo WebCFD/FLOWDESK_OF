@@ -8,10 +8,15 @@ Uses ISO 7730 standard with hardcoded parameters:
 - Clo = 0.7 (light office clothing)
 - RH = 50% (standard relative humidity)
 - Tmrt = Tair (mean radiant temperature equals air temperature)
+
+Usage:
+    python3 calculate_comfort.py <case_path>              # Process only latest timestep
+    python3 calculate_comfort.py <case_path> --all-times  # Process all timesteps (excluding t=0)
 """
 
 import os
 import sys
+import argparse
 import numpy as np
 from foamlib import FoamCase
 import logging
@@ -99,61 +104,32 @@ def calculate_ppd(pmv):
     return ppd
 
 
-def main(case_path):
+def process_timestep(case, time_str):
     """
-    Main function to calculate PMV/PPD fields from OpenFOAM case.
+    Process a single timestep to calculate PMV/PPD fields.
     
     Args:
-        case_path: Path to OpenFOAM case directory
+        case: FoamCase object
+        time_str: Timestep string (e.g., "500", "1000")
     """
-    logging.basicConfig(level=logging.INFO, format='%(message)s')
-    logger.info("=" * 70)
-    logger.info("THERMAL COMFORT CALCULATION (PMV/PPD)")
-    logger.info("=" * 70)
-    
-    # Open OpenFOAM case
-    case = FoamCase(case_path)
-    
-    # Find latest timestep
-    time_dirs = [d for d in os.listdir(case_path) if d.replace('.', '').replace('-', '').isdigit()]
-    if len(time_dirs) == 0:
-        logger.error("No timesteps found in case!")
-        sys.exit(1)
-    
-    # Sort and get latest
-    time_values = [float(t) for t in time_dirs]
-    time_values.sort()
-    latest_time_float = time_values[-1]
-    
-    # Convert to string: use integer format if it's a whole number
-    if latest_time_float.is_integer():
-        latest_time = str(int(latest_time_float))
-    else:
-        latest_time = str(latest_time_float)
-    
-    logger.info(f"Latest timestep: {latest_time}")
-    logger.info(f"Comfort parameters:")
-    logger.info(f"  - Metabolic rate (Met): {MET} met")
-    logger.info(f"  - Clothing insulation (Clo): {CLO} clo")
-    logger.info(f"  - Relative humidity (RH): {RH} %")
-    logger.info(f"  - Mean radiant temp (Tmrt): Equal to air temperature")
-    logger.info("")
+    logger.info(f"\n{'='*70}")
+    logger.info(f"Processing timestep: {time_str}")
+    logger.info(f"{'='*70}")
     
     # Read temperature field [K]
     logger.info("Reading temperature field (T)...")
-    with case[latest_time]['T'] as T_field:
+    with case[time_str]['T'] as T_field:
         T_internal = T_field.internal_field  # [K]
         T_boundary = T_field.boundary_field
     
     # Read velocity field [m/s]
     logger.info("Reading velocity field (U)...")
-    with case[latest_time]['U'] as U_field:
+    with case[time_str]['U'] as U_field:
         U_internal = U_field.internal_field  # [m/s]
         U_boundary = U_field.boundary_field
     
     n_cells = len(T_internal)
     logger.info(f"Number of cells: {n_cells}")
-    logger.info("")
     
     # Convert temperature to Celsius
     T_celsius = T_internal - 273.15
@@ -241,11 +217,10 @@ def main(case_path):
     comfortable = np.sum((pmv_field >= -0.5) & (pmv_field <= 0.5))
     comfortable_pct = 100.0 * comfortable / n_cells
     logger.info(f"  Cells in comfort zone (-0.5 < PMV < 0.5): {comfortable_pct:.1f}%")
-    logger.info("")
     
     # Write PMV field
-    logger.info("Writing PMV field...")
-    with case[latest_time]['PMV'] as pmv_out:
+    logger.info("\nWriting PMV field...")
+    with case[time_str]['PMV'] as pmv_out:
         pmv_out.internal_field = pmv_field
         # Keep existing boundary fields (type: 'calculated')
         pmv_out.boundary_field = {}
@@ -257,7 +232,7 @@ def main(case_path):
     
     # Write PPD field
     logger.info("Writing PPD field...")
-    with case[latest_time]['PPD'] as ppd_out:
+    with case[time_str]['PPD'] as ppd_out:
         ppd_out.internal_field = ppd_field
         # Keep existing boundary fields (type: 'calculated')
         ppd_out.boundary_field = {}
@@ -267,11 +242,80 @@ def main(case_path):
                 'value': ppd_field.mean()  # Use mean value for boundaries
             }
     
-    logger.info("")
-    logger.info("✓ PMV/PPD thermal comfort fields calculated successfully")
+    logger.info(f"✓ PMV/PPD calculated for timestep {time_str}")
+
+
+def main():
+    """
+    Main function to calculate PMV/PPD fields from OpenFOAM case.
+    """
+    # Setup argument parser
+    parser = argparse.ArgumentParser(description='Calculate PMV/PPD thermal comfort fields from OpenFOAM results')
+    parser.add_argument('case_path', nargs='?', default='.', help='Path to OpenFOAM case directory')
+    parser.add_argument('--all-times', action='store_true', 
+                        help='Calculate PMV/PPD for all timesteps (excluding t=0)')
+    args = parser.parse_args()
+    
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
+    logger.info("=" * 70)
+    logger.info("THERMAL COMFORT CALCULATION (PMV/PPD)")
+    logger.info("=" * 70)
+    logger.info(f"Comfort parameters:")
+    logger.info(f"  - Metabolic rate (Met): {MET} met")
+    logger.info(f"  - Clothing insulation (Clo): {CLO} clo")
+    logger.info(f"  - Relative humidity (RH): {RH} %")
+    logger.info(f"  - Mean radiant temp (Tmrt): Equal to air temperature")
+    
+    # Open OpenFOAM case
+    case = FoamCase(args.case_path)
+    
+    # Find all timesteps
+    time_dirs = [d for d in os.listdir(args.case_path) if d.replace('.', '').replace('-', '').isdigit()]
+    if len(time_dirs) == 0:
+        logger.error("\nNo timesteps found in case!")
+        sys.exit(1)
+    
+    # Sort timesteps
+    time_values = [float(t) for t in time_dirs]
+    time_values.sort()
+    
+    # Determine which timesteps to process
+    if args.all_times:
+        # Process all timesteps except 0
+        times_to_process = [t for t in time_values if t > 0]
+        logger.info(f"\nMode: Processing ALL timesteps (excluding t=0)")
+        logger.info(f"Timesteps to process: {times_to_process}")
+    else:
+        # Process only latest timestep (backward compatibility)
+        times_to_process = [time_values[-1]]
+        logger.info(f"\nMode: Processing ONLY latest timestep")
+        logger.info(f"Latest timestep: {times_to_process[0]}")
+    
+    if len(times_to_process) == 0:
+        logger.error("\nNo timesteps to process!")
+        sys.exit(1)
+    
+    # Process each timestep
+    for time_val in times_to_process:
+        # Convert to string: use integer format if it's a whole number
+        if time_val.is_integer():
+            time_str = str(int(time_val))
+        else:
+            time_str = str(time_val)
+        
+        try:
+            process_timestep(case, time_str)
+        except Exception as e:
+            logger.error(f"\n❌ Error processing timestep {time_str}: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            # Continue with next timestep instead of failing completely
+            continue
+    
+    logger.info("\n" + "=" * 70)
+    logger.info(f"✅ PMV/PPD calculation completed for {len(times_to_process)} timestep(s)")
     logger.info("=" * 70)
 
 
 if __name__ == "__main__":
-    case_path = sys.argv[1] if len(sys.argv) > 1 else "."
-    main(case_path)
+    main()

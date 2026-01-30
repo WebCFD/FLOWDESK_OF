@@ -10,7 +10,7 @@ ENV/
 *.egg-info/
 dist/
 build/
-PYTHON_STEPS/outputs/
+PYTHON_STEPS/outputs/*
 
 # IDE
 .vscode/
@@ -20,7 +20,5 @@ PYTHON_STEPS/outputs/
 .DS_Store
 *.log
 *.stlcases/*/sim/constant/polyMesh/faces
-cases/*/sim/constant/polyMesh/points
-cases/*/sim/VTK/
-cases/*/sim/constant/polyMesh/owner
-cases/*/sim/constant/polyMesh/neighbour
+cases/*
+PYTHON_STEPS/cases/*

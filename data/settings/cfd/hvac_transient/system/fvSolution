@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v2412                                 |
+|  \\    /   O peration     | Version:  v2406                                 |
 |   \\  /    A nd           | Website:  www.openfoam.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -16,6 +16,20 @@ FoamFile
 
 solvers
 {
+    Phi
+    {
+        solver          GAMG;
+        smoother        GaussSeidel;
+        tolerance       1e-6;
+        relTol          0.01;
+        nPreSweeps      0;
+        nPostSweeps     2;
+        cacheAgglomeration true;
+        nCellsInCoarsestLevel 10;
+        agglomerator    faceAreaPair;
+        mergeLevels     1;
+    }
+
     "rho.*"
     {
         solver          PCG;
@@ -26,16 +40,24 @@ solvers
 
     p_rgh
     {
-        solver          GAMG;
-        smoother        GaussSeidel;
-        tolerance       1e-7;
-        relTol          0.01;
-        nPreSweeps      0;
-        nPostSweeps     2;
-        cacheAgglomeration true;
+        solver              GAMG;
+        tolerance           1e-06;
+        relTol              0.01;
+        smoother            DICGaussSeidel;
+        cacheAgglomeration  true;
         nCellsInCoarsestLevel 10;
-        agglomerator    faceAreaPair;
-        mergeLevels     1;
+        agglomerator        faceAreaPair;
+        mergeLevels         1;
+        nPreSweeps          1;        // Aumentado 0→1 para más trabajo por iteración
+        nPostSweeps         3;        // Aumentado 2→3
+        nFinestSweeps       3;        // Aumentado 2→3
+        minIter             4;        // Aumentado 3→4
+        maxIter             200;
+        
+        // Pressure limits (kinematic units [m²/s²] for incompressible)
+        // ±40000 Pa / 1.2 kg/m³ = ±33333 m²/s²
+        pMin                -33333;   // -40000 Pa in kinematic pressure
+        pMax                33333;    // +40000 Pa in kinematic pressure
     }
 
     p_rghFinal
@@ -44,7 +66,7 @@ solvers
         relTol          0;
     }
 
-    "(U|h|k|omega|epsilon)"
+    "(U|T)"
     {
         solver          PBiCGStab;
         preconditioner  DILU;
@@ -52,86 +74,47 @@ solvers
         relTol          0.1;
     }
 
-    "(U|h|k|omega|epsilon)Final"
+    "(U|T)Final"
     {
         $U;
         relTol          0;
     }
-
-    // Scalar transport (CO2)
-    CO2
+    
+    "(k|omega)"
     {
-        $U;
-        relTol          0.01;
-    }
-
-    // Age of air
-    age
-    {
-        $U;
-        relTol          0.01;
-    }
-
-    // Radiation (if P1 model active)
-    G
-    {
-        solver          GAMG;
-        smoother        GaussSeidel;
-        tolerance       1e-6;
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-7;
         relTol          0.1;
     }
 
-    GFinal
+    "(k|omega)Final"
     {
-        $G;
+        $k;
         relTol          0;
+    }
+
+    CO2
+    {
+        $U;
+        relTol          0.001;
     }
 }
 
-PIMPLE
+SIMPLE
 {
-    // ============================================================
-    // ULTRA-STABLE CONFIGURATION
-    // Use for initial convergence and difficult cases
-    // ============================================================
+    nNonOrthogonalCorrectors 6;  // Increased to 6 for maximum pressure-velocity coupling
+    consistent          yes;
+    pRefCell            0;
+    pRefValue           0;  // Gauge pressure reference (p = p_rgh + g·h)
     
-    nOuterCorrectors        5;      // More outer iterations for stability
-    // HIGH ACCURACY: nOuterCorrectors  3;
-    
-    nCorrectors             2;      // Pressure correctors per outer loop
-    nNonOrthogonalCorrectors 1;     // Non-orthogonal corrections
-    
-    // Momentum predictor
-    momentumPredictor       yes;
-    
-    // Consistent formulation for transient
-    consistent              yes;
-    
-    // Reference pressure
-    pRefCell                0;
-    pRefValue               0;
-    
-    // Residual control for outer loop (strict for stability)
-    outerCorrectorResidualControl
+    residualControl
     {
-        p_rgh
-        {
-            tolerance       5e-5;   // Stricter tolerance
-            relTol          0;
-            // HIGH ACCURACY: tolerance 1e-4;
-        }
-        U
-        {
-            tolerance       5e-5;   // Stricter tolerance
-            relTol          0;
-            // HIGH ACCURACY: tolerance 1e-4;
-        }
-        h
-        {
-            tolerance       5e-5;   // Stricter tolerance
-            relTol          0;
-            // HIGH ACCURACY: tolerance 1e-4;
-        }
+        p_rgh           1e-4;
+        U               1e-4;
+        T               1e-4;
+        k               1e-4;
+        omega           1e-4;
     }
 }
 
@@ -139,33 +122,15 @@ relaxationFactors
 {
     fields
     {
-        // ============================================================
-        // ULTRA-STABLE RELAXATION (slower convergence, no oscillations)
-        // ============================================================
-        
-        rho             0.05;   // Very conservative density updates
-        // HIGH ACCURACY: rho    0.1;
-        
-        p_rgh           0.3;    // Pressure relaxation (can go to 0.2 if unstable)
+        p_rgh           0.08;  // Maximum conservatism for p_rgh convergence
     }
     equations
     {
-        // Conservative relaxation for all equations
-        U               0.5;    // Momentum (reduced from 0.7)
-        h               0.5;    // Energy (reduced from 0.7)
-        k               0.5;    // Turbulent kinetic energy (reduced from 0.7)
-        omega           0.5;    // Specific dissipation rate (reduced from 0.7)
-        epsilon         0.5;    // Dissipation rate (reduced from 0.7)
-        
-        // HIGH ACCURACY (after ~100s stable):
-        // U               0.7;
-        // h               0.7;
-        // k               0.7;
-        // omega           0.7;
-        // epsilon         0.7;
-        
-        ".*Final"       1.0;    // No relaxation for final correctors
+        U               0.25;  // Extreme stability for strong buoyancy
+        T               0.35;  // Extreme stability for thermal coupling
+        "(k|omega)"     0.5;   // Turbulence model stability
     }
 }
+
 
 // ************************************************************************* //

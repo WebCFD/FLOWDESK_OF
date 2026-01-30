@@ -187,7 +187,14 @@ def main():
         json_payload = json.load(f)
     
     case_name = json_payload.get("case_name", "DefaultCase")
-    log_print(f"📋 Case name: {case_name}\n")
+    
+    # Read simulation type from JSON (TransientSim or SteadySim)
+    simulation_type_str = json_payload.get("simulationType", "SteadySim")  # Default: steady
+    transient_mode = (simulation_type_str == "TransientSim")
+    
+    log_print(f"📋 Case name: {case_name}")
+    log_print(f"🔧 Simulation type: {simulation_type_str} ({'TRANSIENT' if transient_mode else 'STEADY'})")
+    log_print(f"   Solver: {'buoyantBoussinesqPimpleFoam' if transient_mode else 'buoyantSimpleFoam'}\n")
     
     # Crear directorio de caso para step03 (necesario para copiar STL)
     case_path = os.path.join(os.getcwd(), "cases", case_name)
@@ -402,13 +409,14 @@ def main():
     try:
         log_print("🔄 Ejecutando STEP 03...")
         
-        # Ejecutar step03 con transient=True por defecto (buoyantPimpleFoam)
+        # Execute step03 with transient mode from JSON
+        log_print(f"   Using solver: {'buoyantBoussinesqPimpleFoam (transient)' if transient_mode else 'buoyantSimpleFoam (steady)'}")
         step03_run(
             case_name=case_name,
             type="hvac",
             mesh_script=mesh_script_commands,
             simulation_type="comfortTest",
-            transient=True
+            transient=transient_mode  # Read from JSON: TransientSim or SteadySim
         )
         
         # Validar output
@@ -494,97 +502,128 @@ def main():
             shutil.copy(stl_file, sim_stl_file)
             log_print(f"✓ Geometría copiada a: {sim_stl_file}")
         
-        # Ejecutar Allrun según el modo: mesh-only (solo malla) o full (malla + CFD)
-        if EXECUTION_MODE in ["mesh-only", "full"]:
-            mode_description = "CFMESH (Allrun)" if EXECUTION_MODE == "mesh-only" else "SIMULACIÓN CFD COMPLETA (Allrun)"
+        # Ejecutar según el modo: mesh-only (SOLO cfMesh) o full (cfMesh + CFD completo)
+        if EXECUTION_MODE == "mesh-only":
+            # MESH-ONLY: Ejecutar SOLO los comandos de mesh (cfMesh), NO el solver CFD
             log_print("\n" + "="*70)
-            log_print(f"EJECUTANDO {mode_description}")
+            log_print("EJECUTANDO CFMESH (SOLO MALLA)")
+            log_print("="*70 + "\n")
+            log_print("⚠️  MODO mesh-only: Solo generará la malla con cfMesh")
+            log_print("   NO ejecutará la simulación CFD (buoyantPimpleFoam)\n")
+            
+            sim_path = os.path.join(case_path, "sim")
+            
+            try:
+                import subprocess
+                
+                # Crear script temporal solo con comandos de mesh
+                mesh_only_script = os.path.join(sim_path, "Allrun_mesh_only.sh")
+                with open(mesh_only_script, 'w', encoding='utf-8') as f:
+                    f.write("#!/bin/sh\n")
+                    f.write('cd "${0%/*}" || exit\n')
+                    f.write('. ${WM_PROJECT_DIR:?}/bin/tools/RunFunctions\n\n')
+                    # Solo escribir comandos de mesh (hasta checkMesh inclusive)
+                    for cmd in mesh_script_commands:
+                        f.write(cmd + '\n')
+                
+                # Hacer ejecutable
+                os.chmod(mesh_only_script, 0o755)
+                
+                log_print(f"🔄 Ejecutando script de mesh: {mesh_only_script}\n")
+                
+                # Ejecutar solo cfMesh
+                cmd = f"bash -c 'source /usr/lib/openfoam/openfoam2412/etc/bashrc && cd {sim_path} && ./Allrun_mesh_only.sh'"
+                result = subprocess.run(cmd, shell=True, capture_output=True, text=True, executable="/bin/bash", encoding='utf-8', errors='replace')
+                
+                # Verificar que se generó polyMesh
+                polymesh_path = os.path.join(sim_path, "constant", "polyMesh")
+                if os.path.exists(polymesh_path):
+                    points_file = os.path.join(polymesh_path, "points")
+                    if os.path.exists(points_file):
+                        log_print("✅ cfMesh ejecutado exitosamente")
+                        log_print("   Malla generada en: constant/polyMesh/")
+                        log_print(f"   ✓ Archivo points encontrado")
+                        log_print("\n⚠️  Simulación CFD NO ejecutada (modo mesh-only)")
+                    else:
+                        log_print("⚠️  polyMesh creado pero sin archivo points")
+                        if result.stderr:
+                            log_print(f"   Stderr: {result.stderr[:300]}")
+                else:
+                    log_print(f"❌ cfMesh NO generó polyMesh")
+                    log_print(f"   Return code: {result.returncode}")
+                    if result.stderr:
+                        log_print(f"   Stderr: {result.stderr[:500]}")
+                    if result.stdout:
+                        stdout_lines = result.stdout.split('\n')
+                        log_print(f"   Últimas líneas de output:")
+                        for line in stdout_lines[-10:]:
+                            if line.strip():
+                                log_print(f"     {line}")
+                                
+            except Exception as e:
+                log_print(f"❌ Error ejecutando cfMesh: {str(e)}")
+                import traceback
+                log_print(traceback.format_exc())
+                
+        elif EXECUTION_MODE == "full":
+            # FULL: Ejecutar Allrun completo (cfMesh + CFD)
+            log_print("\n" + "="*70)
+            log_print("EJECUTANDO SIMULACIÓN CFD COMPLETA (Allrun)")
             log_print("="*70 + "\n")
             
             sim_path = os.path.join(case_path, "sim")
             allrun_path = os.path.join(sim_path, "Allrun")
             
             if os.path.exists(allrun_path):
-                if EXECUTION_MODE == "mesh-only":
-                    log_print(f"🔄 Ejecutando: {allrun_path}")
-                    log_print("   Esto generará la malla con cfMesh...\n")
-                else:  # full mode
-                    log_print(f"🔄 Ejecutando: {allrun_path}")
-                    log_print("   Pipeline completo:")
-                    log_print("   1. cfMesh (genera malla)")
-                    log_print("   2. setFields (gradiente hidrostático)")
-                    log_print("   3. decomposePar (prepara paralelo)")
-                    log_print("   4. buoyantPimpleFoam Fase 1 (CFL=0.1, timesteps 0-100)")
-                    log_print("   5. buoyantPimpleFoam Fase 2 (CFL=0.5, timesteps 100-400)")
-                    log_print("   6. buoyantPimpleFoam Fase 3 (CFL=0.8, timesteps 400-1000)")
-                    log_print("   7. reconstructPar (reconstruye malla)")
-                    log_print("   8. PMV/PPD comfort calculation")
-                    log_print("   9. foamToVTK (genera visualización)")
-                    log_print("\n   ⏱️  Esto puede tomar varios minutos...\n")
+                log_print(f"🔄 Ejecutando: {allrun_path}")
+                log_print("   Pipeline completo:")
+                log_print("   1. cfMesh (genera malla)")
+                log_print("   2. setFields (gradiente hidrostático)")
+                log_print("   3. decomposePar (prepara paralelo)")
+                log_print("   4. buoyantPimpleFoam Fase 1 (CFL=0.1, timesteps 0-100)")
+                log_print("   5. buoyantPimpleFoam Fase 2 (CFL=0.5, timesteps 100-400)")
+                log_print("   6. buoyantPimpleFoam Fase 3 (CFL=0.8, timesteps 400-1000)")
+                log_print("   7. reconstructPar (reconstruye malla)")
+                log_print("   8. PMV/PPD comfort calculation")
+                log_print("   9. foamToVTK (genera visualización)")
+                log_print("\n   ⏱️  Esto puede tomar varios minutos...\n")
                 
                 try:
                     import subprocess
                     # Ejecutar Allrun con OpenFOAM environment cargado correctamente
-                    # Usar bash -c para asegurar que source se ejecuta en el mismo shell
                     cmd = f"bash -c 'source /usr/lib/openfoam/openfoam2412/etc/bashrc && cd {sim_path} && ./Allrun'"
                     result = subprocess.run(cmd, shell=True, capture_output=True, text=True, executable="/bin/bash", encoding='utf-8', errors='replace')
                     
-                    if EXECUTION_MODE == "mesh-only":
-                        # Verificar que se generó polyMesh
-                        polymesh_path = os.path.join(sim_path, "constant", "polyMesh")
-                        if os.path.exists(polymesh_path):
-                            points_file = os.path.join(polymesh_path, "points")
-                            if os.path.exists(points_file):
-                                log_print("✅ cfMesh ejecutado exitosamente")
-                                log_print("   Malla generada en: constant/polyMesh/")
-                                log_print(f"   ✓ Archivo points encontrado")
-                            else:
-                                log_print("⚠️  polyMesh creado pero sin archivo points")
-                                if result.stderr:
-                                    log_print(f"   Stderr: {result.stderr[:300]}")
-                        else:
-                            log_print(f"❌ cfMesh NO generó polyMesh")
-                            log_print(f"   Return code: {result.returncode}")
-                            if result.stderr:
-                                log_print(f"   Stderr: {result.stderr[:500]}")
-                            if result.stdout:
-                                # Mostrar últimas líneas del stdout para ver dónde falló
-                                stdout_lines = result.stdout.split('\n')
-                                log_print(f"   Últimas líneas de output:")
-                                for line in stdout_lines[-10:]:
-                                    if line.strip():
-                                        log_print(f"     {line}")
-                    else:  # full mode
-                        # Verificar que completó exitosamente
-                        if result.returncode == 0:
-                            log_print("\n" + "="*70)
-                            log_print("✅ SIMULACIÓN CFD COMPLETADA EXITOSAMENTE")
-                            log_print("="*70)
-                            
-                            # Verificar resultados generados
-                            vtk_dir = os.path.join(sim_path, "VTK")
-                            if os.path.exists(vtk_dir):
-                                log_print(f"\n📊 Resultados VTK generados en: {vtk_dir}")
-                                vtk_subdirs = [d for d in os.listdir(vtk_dir) if os.path.isdir(os.path.join(vtk_dir, d))]
-                                log_print(f"   Timesteps exportados: {len(vtk_subdirs)}")
-                            
-                            # Verificar logs
-                            log_foam = os.path.join(sim_path, "log.buoyantPimpleFoam")
-                            if os.path.exists(log_foam):
-                                log_print(f"\n📝 Log de simulación: {log_foam}")
-                            
-                            log_print(f"\n📁 Resultados completos en: {sim_path}/")
-                        else:
-                            log_print(f"\n❌ Error en simulación CFD (return code: {result.returncode})")
-                            if result.stderr:
-                                log_print(f"   Stderr (primeros 1000 chars):")
-                                log_print(f"   {result.stderr[:1000]}")
-                            if result.stdout:
-                                stdout_lines = result.stdout.split('\n')
-                                log_print(f"\n   Últimas 20 líneas de output:")
-                                for line in stdout_lines[-20:]:
-                                    if line.strip():
-                                        log_print(f"     {line}")
+                    # Verificar que completó exitosamente
+                    if result.returncode == 0:
+                        log_print("\n" + "="*70)
+                        log_print("✅ SIMULACIÓN CFD COMPLETADA EXITOSAMENTE")
+                        log_print("="*70)
+                        
+                        # Verificar resultados generados
+                        vtk_dir = os.path.join(sim_path, "VTK")
+                        if os.path.exists(vtk_dir):
+                            log_print(f"\n📊 Resultados VTK generados en: {vtk_dir}")
+                            vtk_subdirs = [d for d in os.listdir(vtk_dir) if os.path.isdir(os.path.join(vtk_dir, d))]
+                            log_print(f"   Timesteps exportados: {len(vtk_subdirs)}")
+                        
+                        # Verificar logs
+                        log_foam = os.path.join(sim_path, "log.buoyantPimpleFoam")
+                        if os.path.exists(log_foam):
+                            log_print(f"\n📝 Log de simulación: {log_foam}")
+                        
+                        log_print(f"\n📁 Resultados completos en: {sim_path}/")
+                    else:
+                        log_print(f"\n❌ Error en simulación CFD (return code: {result.returncode})")
+                        if result.stderr:
+                            log_print(f"   Stderr (primeros 1000 chars):")
+                            log_print(f"   {result.stderr[:1000]}")
+                        if result.stdout:
+                            stdout_lines = result.stdout.split('\n')
+                            log_print(f"\n   Últimas 20 líneas de output:")
+                            for line in stdout_lines[-20:]:
+                                if line.strip():
+                                    log_print(f"     {line}")
                 except Exception as e:
                     log_print(f"❌ Error ejecutando Allrun: {str(e)}")
                     import traceback
@@ -599,6 +638,58 @@ def main():
         import traceback
         log_print(traceback.format_exc())
         return False
+    
+    # ============================================================
+    # STEP 05: POST-PROCESAMIENTO - ANÁLISIS DE CONFORT TÉRMICO
+    # ============================================================
+    
+    if EXECUTION_MODE == "full":
+        log_print("\n" + "="*70)
+        log_print("STEP 05: POST-PROCESAMIENTO - ANÁLISIS DE CONFORT (step05_results2post.py)")
+        log_print("="*70 + "\n")
+        
+        try:
+            # Import step05
+            from step05_results2post import run as step05_run
+            
+            log_print("🔄 Ejecutando análisis de confort térmico en 3 planos...")
+            log_print("   - Plano 1: 0.6m (persona sentada)")
+            log_print("   - Plano 2: 1.1m (persona de pie)")
+            log_print("   - Plano 3: 1.7m (nivel cabeza)")
+            log_print("")
+            
+            # Execute step05
+            step05_run(case_name=case_name)
+            
+            # Verificar outputs generados
+            post_path = os.path.join(case_path, "post")
+            if os.path.exists(post_path):
+                log_print(f"\n✅ Post-procesamiento completado")
+                
+                # Verificar archivos generados
+                vtk_dir = os.path.join(post_path, "vtk")
+                images_dir = os.path.join(post_path, "images")
+                metrics_file = os.path.join(post_path, "comfort_metrics.json")
+                
+                if os.path.exists(vtk_dir):
+                    vtk_files = [f for f in os.listdir(vtk_dir) if f.endswith('.vtk')]
+                    log_print(f"   VTK slices generados: {len(vtk_files)}")
+                
+                if os.path.exists(images_dir):
+                    png_files = [f for f in os.listdir(images_dir) if f.endswith('.png')]
+                    log_print(f"   Imágenes PNG generadas: {len(png_files)}")
+                
+                if os.path.exists(metrics_file):
+                    log_print(f"   Métricas de confort: {os.path.basename(metrics_file)}")
+                
+                log_print(f"\n📁 Resultados de post-procesamiento en: {post_path}/")
+            
+        except Exception as e:
+            log_print(f"\n⚠️  Error en post-procesamiento: {str(e)}")
+            log_print("   La simulación CFD completó, pero falló el análisis de confort")
+            import traceback
+            log_print(traceback.format_exc())
+            # No return False - continuamos con el resumen
     
     # ============================================================
     # RESUMEN FINAL

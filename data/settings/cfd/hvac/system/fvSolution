@@ -40,10 +40,24 @@ solvers
 
     p_rgh
     {
-        solver          GAMG;
-        smoother        GaussSeidel;
-        tolerance       1e-8;
-        relTol          0.01;
+        solver              GAMG;
+        tolerance           1e-06;
+        relTol              0.01;
+        smoother            DICGaussSeidel;
+        cacheAgglomeration  true;
+        nCellsInCoarsestLevel 10;
+        agglomerator        faceAreaPair;
+        mergeLevels         1;
+        nPreSweeps          1;        // Aumentado 0→1 para más trabajo por iteración
+        nPostSweeps         3;        // Aumentado 2→3
+        nFinestSweeps       3;        // Aumentado 2→3
+        minIter             4;        // Aumentado 3→4
+        maxIter             200;
+        
+        // Pressure limits (kinematic units [m²/s²] for incompressible)
+        // ±40000 Pa / 1.2 kg/m³ = ±33333 m²/s²
+        pMin                -33333;   // -40000 Pa in kinematic pressure
+        pMax                33333;    // +40000 Pa in kinematic pressure
     }
 
     p_rghFinal
@@ -52,7 +66,7 @@ solvers
         relTol          0;
     }
 
-    "(U|h|k|epsilon|omega)"
+    "(U|T)"
     {
         solver          PBiCGStab;
         preconditioner  DILU;
@@ -60,13 +74,27 @@ solvers
         relTol          0.1;
     }
 
-    "(U|h|k|epsilon|omega)Final"
+    "(U|T)Final"
     {
         $U;
         relTol          0;
     }
+    
+    "(k|omega)"
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-7;
+        relTol          0.1;
+    }
 
-    age
+    "(k|omega)Final"
+    {
+        $k;
+        relTol          0;
+    }
+
+    CO2
     {
         $U;
         relTol          0.001;
@@ -75,16 +103,18 @@ solvers
 
 SIMPLE
 {
-    nNonOrthogonalCorrectors 3;
+    nNonOrthogonalCorrectors 6;  // Increased to 6 for maximum pressure-velocity coupling
     consistent          yes;
     pRefCell            0;
-    pRefValue           0;
+    pRefValue           0;  // Gauge pressure reference (p = p_rgh + g·h)
     
     residualControl
     {
         p_rgh           1e-4;
         U               1e-4;
-        h               1e-4;
+        T               1e-4;
+        k               1e-4;
+        omega           1e-4;
     }
 }
 
@@ -92,16 +122,13 @@ relaxationFactors
 {
     fields
     {
-        rho             0.05;  // VERY conservative for diagnostic (Nov 4, 2025)
-        p_rgh           0.1;   // Drastically reduced for stability analysis
-        p_rghFinal      0.1;
+        p_rgh           0.08;  // Maximum conservatism for p_rgh convergence
     }
     equations
     {
-        U               0.1;   // Drastically reduced for stability analysis
-        h               0.2;   // Drastically reduced for stability analysis
-        "(k|epsilon|omega)" 0.2;
-        UFinal          0.3;
+        U               0.25;  // Extreme stability for strong buoyancy
+        T               0.35;  // Extreme stability for thermal coupling
+        "(k|omega)"     0.5;   // Turbulence model stability
     }
 }
 

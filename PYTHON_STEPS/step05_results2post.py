@@ -1,27 +1,27 @@
 import os
+import sys
 import logging
+from pathlib import Path
 
-from src.components.post.objects import post_objects
+# Add project root to path for src imports
+project_root = str(Path(__file__).parent.parent)
+sys.path.insert(0, project_root)
+
+from src.components.post.objects import analyze_comfort_planes
 from src.components.tools.performance import PerformanceMonitor
 
-# NOTE: PDF and residuals analysis removed to reduce memory usage
-# from src.components.post.pdf import post_pdf
-# from src.components.post.residuals import analyse_residuals
 
 logger = logging.getLogger(__name__)
 
 
 def run(case_name: str = "cases/cfd_case") -> None:
     """
-    Process CFD simulation results - OPTIMIZED FOR MEMORY EFFICIENCY.
+    Post-process CFD simulation results: Thermal comfort analysis.
     
-    This function generates only VTK files for interactive web visualization:
-    1. Validates simulation results and sets up post-processing environment
-    2. Generates VTK slice files and complete mesh for web viewer
-    3. Converts VTK to vtkjs format for browser compatibility
-    
-    NOTE: Image rendering, PDF reports, and residual plots have been removed
-    to prevent OOM (Out of Memory) issues in production.
+    Analyzes PMV/PPD fields in 3 horizontal planes (0.6m, 1.1m, 1.7m) and generates:
+    - VTK slice files for each plane
+    - PNG images (isometric view) for PMV and PPD
+    - JSON file with comfort metrics
     
     Args:
         case_name: Name of the simulation case
@@ -32,33 +32,42 @@ def run(case_name: str = "cases/cfd_case") -> None:
     performance_monitor = PerformanceMonitor()
     performance_monitor.start()
     
-    logger.info("\n=========== RUNNING CFD POST-PROCESSING ===========")
+    logger.info("\n=========== RUNNING THERMAL COMFORT POST-PROCESSING ===========")
 
-    # Step 1: Set up post-processing environment and validate results
-    sim_path = os.path.join(os.getcwd(), "cases", case_name, "sim")
-    post_path = os.path.join(os.getcwd(), "cases", case_name, "post")
-    logger.info(f"1 - Setting up post-processing environment: {post_path}")
+    # Setup paths
+    sim_path = os.path.join(os.getcwd(), "PYTHON_STEPS", "cases", case_name, "sim")
+    post_path = os.path.join(os.getcwd(), "PYTHON_STEPS", "cases", case_name, "post")
+    
+    logger.info(f"Simulation path: {sim_path}")
+    logger.info(f"Post-processing output: {post_path}")
+    
+    # Analyze comfort in horizontal planes
+    logger.info("\n1 - Analyzing PMV/PPD thermal comfort in horizontal planes")
     performance_monitor.update_memory()
     
-    # NOTE: Residual analysis and PDF generation removed to reduce memory usage
-    # The web viewer provides interactive 3D visualization of results
-    
-    # Generate VTK files for web viewer (lightweight, no rendering)
-    logger.info("2 - Generating VTK files for web viewer")
-    internal_mesh = post_objects(sim_path, post_path)
+    results = analyze_comfort_planes(sim_path, post_path)
     performance_monitor.update_memory()
+    
+    # Summary
+    logger.info("\n=========== COMFORT ANALYSIS SUMMARY ===========")
+    for plane_name, metrics in results.items():
+        logger.info(f"\n{plane_name.upper()} (z={metrics['height_m']}m):")
+        logger.info(f"  Comfort area: {metrics['comfort_area_pct']:.1f}%")
+        logger.info(f"  PMV: {metrics['pmv_mean']:.2f} ± {metrics['pmv_std']:.2f} (range: [{metrics['pmv_min']:.2f}, {metrics['pmv_max']:.2f}])")
+        logger.info(f"  PPD: {metrics['ppd_mean']:.1f}% (max: {metrics['ppd_max']:.1f}%)")
     
     # Log performance summary
     performance_summary = performance_monitor.get_summary()
-    logger.info(f"Total processing time: {performance_summary['total_time']:.2f}s")
+    logger.info(f"\nTotal processing time: {performance_summary['total_time']:.2f}s")
     logger.info(f"Peak memory usage: {performance_summary['peak_memory_mb']:.1f}MB")
-    logger.info(f"✅ Post-processing completed successfully - results saved at {post_path}")
+    logger.info(f"\n✅ Post-processing completed successfully")
+    logger.info(f"Results saved at: {post_path}")
 
 
 if __name__ == "__main__":
     import sys
     
-    # Configure logging to print to stderr for subprocess visibility
+    # Configure logging
     logging.basicConfig(
         level=logging.INFO,
         format='%(levelname)s - %(message)s',

@@ -1,0 +1,126 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+
+application       pimpleFoam;  // ISOTHERMAL incompressible solver
+
+startFrom         startTime;
+
+startTime         0;
+
+stopAt            endTime;
+
+endTime           1.0;
+
+deltaT            0.0001;
+
+writeControl      timeStep;
+
+writeInterval     1;
+
+purgeWrite        5;
+
+writeFormat       ascii;
+
+writePrecision    8;
+
+writeCompression  off;
+
+timeFormat        general;
+
+timePrecision     6;
+
+runTimeModifiable true;
+
+// Adaptive timestep control based on CFL number
+adjustTimeStep    yes;
+
+maxCo             0.5;
+
+maxAlphaCo        0.5;
+
+maxDeltaT         0.01;
+
+minDeltaT         1e-6;
+
+functions
+{
+    // Field averaging (isothermal: only U, p)
+    fieldAverage1
+    {
+        type            fieldAverage;
+        libs            ("libfieldFunctionObjects.so");
+        writeControl    writeTime;
+        
+        fields
+        (
+            U
+            {
+                mean        on;
+                prime2Mean  off;
+                base        time;
+            }
+            p
+            {
+                mean        on;
+                prime2Mean  off;
+                base        time;
+            }
+            k
+            {
+                mean        on;
+                prime2Mean  off;
+                base        time;
+            }
+            omega
+            {
+                mean        on;
+                prime2Mean  off;
+                base        time;
+            }
+        );
+    }
+
+    // Probes (isothermal: no T)
+    probes1
+    {
+        type            probes;
+        libs            ("libsampling.so");
+        writeControl    timeStep;
+        writeInterval   1;
+        
+        fields
+        (
+            U
+            p
+            k
+            omega
+        );
+        
+        probeLocations
+        (
+            // Define probe locations in case-specific setup
+        );
+    }
+
+    // Residuals monitoring (isothermal: no h)
+    residuals
+    {
+        type            residuals;
+        libs            ("libutilityFunctionObjects.so");
+        writeControl    timeStep;
+        writeInterval   1;
+        
+        fields
+        (
+            U
+            p_rgh
+            k
+            omega
+        );
+    }
+}

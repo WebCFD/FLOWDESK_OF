@@ -1,0 +1,75 @@
+{
+  "case_name": "simpleV1",
+  "simulationType": "comfort",
+  "version": "1.0",
+  "levels": {
+    "0": {
+      "height": 2.2,
+      "deck": 0.35,
+      "ceiling": {
+        "temp": 60,
+        "airEntries": []
+      },
+      "floor": {
+        "temp": 10,
+        "airEntries": []
+      },
+      "walls": [
+        {
+          "id": "wall_0F_1",
+          "start": {
+            "x": 2.5,
+            "y": 1.75
+          },
+          "end": {
+            "x": -1.5,
+            "y": 1.75
+          },
+          "temp": 20,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_2",
+          "start": {
+            "x": -1.5,
+            "y": 1.75
+          },
+          "end": {
+            "x": -1.5,
+            "y": -0.75
+          },
+          "temp": 50,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_3",
+          "start": {
+            "x": -1.5,
+            "y": -0.75
+          },
+          "end": {
+            "x": 2.5,
+            "y": -0.75
+          },
+          "temp": 15,
+          "airEntries": []
+        },
+        {
+          "id": "wall_0F_4",
+          "start": {
+            "x": 2.5,
+            "y": -0.75
+          },
+          "end": {
+            "x": 2.5,
+            "y": 1.75
+          },
+          "temp": 15,
+          "airEntries": []
+        }
+      ],
+      "stairs": [],
+      "furniture": []
+    }
+  }
+}

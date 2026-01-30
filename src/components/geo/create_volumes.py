@@ -39,10 +39,11 @@ FLOW_VALUES = {
         'high': 400.0
     },
     # Pressure boundary conditions (Pa)
+    # DIAGNOSTIC TEST: All set to 0 to test if ΔP is causing the crash
     'pressure': {
-        'low': 0.3,
-        'medium': 2.5,
-        'high': 5.0
+        'low': 0.3,     # Pa - Low pressure differential
+        'medium': 5,    # Pa - Medium pressure differential  
+        'high': 25      # Pa - High pressure differential
     }
 }
 

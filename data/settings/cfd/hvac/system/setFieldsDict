@@ -6,120 +6,120 @@ FoamFile
     object      setFieldsDict;
 }
 
-// Establish hydrostatic pressure distribution: p(z) = p_atm - rho * g * z
-// This provides a physically consistent initial condition for buoyantSimpleFoam
+// Establish hydrostatic pressure distribution for KINEMATIC pressure [m²/s²]
+// buoyantBoussinesqSimpleFoam uses KINEMATIC pressure: p_k = p_dynamic / rho
 //
 // Constants:
-//   p_atm = 101325 Pa (atmospheric pressure at ground level)
+//   p_atm = 101325 Pa → 101325/1.2 = 84437.5 m²/s² (kinematic)
 //   rho_ref = 1.2 kg/m³ (air density at 20°C)
 //   g = 9.81 m/s²
 //
-// Pressure gradient: dp/dz = -11.772 Pa/m
+// Pressure gradient: dp/dz = -g = -9.81 m²/s²/m (kinematic)
 
 defaultFieldValues
 (
-    volScalarFieldValue p 101325
+    volScalarFieldValue p 84437.5
 );
 
 regions
 (
-    // Layer 0.0-0.5m: p = 101325 - 1.2*9.81*0.25 = 101322.1 Pa
+    // Layer 0.0-0.5m: p_k = 84437.5 - 9.81*0.25 = 84435.0 m²/s²
     boxToCell
     {
         box (-1000 -1000 0.0) (1000 1000 0.5);
         fieldValues
         (
-            volScalarFieldValue p 101322.1
+            volScalarFieldValue p 84435.0
         );
     }
 
-    // Layer 0.5-1.0m: p = 101325 - 1.2*9.81*0.75 = 101316.2 Pa
+    // Layer 0.5-1.0m: p_k = 84437.5 - 9.81*0.75 = 84430.1 m²/s²
     boxToCell
     {
         box (-1000 -1000 0.5) (1000 1000 1.0);
         fieldValues
         (
-            volScalarFieldValue p 101316.2
+            volScalarFieldValue p 84430.1
         );
     }
 
-    // Layer 1.0-1.5m: p = 101325 - 1.2*9.81*1.25 = 101310.2 Pa
+    // Layer 1.0-1.5m: p_k = 84437.5 - 9.81*1.25 = 84425.2 m²/s²
     boxToCell
     {
         box (-1000 -1000 1.0) (1000 1000 1.5);
         fieldValues
         (
-            volScalarFieldValue p 101310.2
+            volScalarFieldValue p 84425.2
         );
     }
 
-    // Layer 1.5-2.0m: p = 101325 - 1.2*9.81*1.75 = 101304.3 Pa
+    // Layer 1.5-2.0m: p_k = 84437.5 - 9.81*1.75 = 84420.3 m²/s²
     boxToCell
     {
         box (-1000 -1000 1.5) (1000 1000 2.0);
         fieldValues
         (
-            volScalarFieldValue p 101304.3
+            volScalarFieldValue p 84420.3
         );
     }
 
-    // Layer 2.0-2.5m: p = 101325 - 1.2*9.81*2.25 = 101298.4 Pa
+    // Layer 2.0-2.5m: p_k = 84437.5 - 9.81*2.25 = 84415.4 m²/s²
     boxToCell
     {
         box (-1000 -1000 2.0) (1000 1000 2.5);
         fieldValues
         (
-            volScalarFieldValue p 101298.4
+            volScalarFieldValue p 84415.4
         );
     }
 
-    // Layer 2.5-3.0m: p = 101325 - 1.2*9.81*2.75 = 101292.6 Pa
+    // Layer 2.5-3.0m: p_k = 84437.5 - 9.81*2.75 = 84410.5 m²/s²
     boxToCell
     {
         box (-1000 -1000 2.5) (1000 1000 3.0);
         fieldValues
         (
-            volScalarFieldValue p 101292.6
+            volScalarFieldValue p 84410.5
         );
     }
 
-    // Layer 3.0-3.5m: p = 101325 - 1.2*9.81*3.25 = 101286.7 Pa
+    // Layer 3.0-3.5m: p_k = 84437.5 - 9.81*3.25 = 84405.6 m²/s²
     boxToCell
     {
         box (-1000 -1000 3.0) (1000 1000 3.5);
         fieldValues
         (
-            volScalarFieldValue p 101286.7
+            volScalarFieldValue p 84405.6
         );
     }
 
-    // Layer 3.5-4.0m: p = 101325 - 1.2*9.81*3.75 = 101280.8 Pa
+    // Layer 3.5-4.0m: p_k = 84437.5 - 9.81*3.75 = 84400.7 m²/s²
     boxToCell
     {
         box (-1000 -1000 3.5) (1000 1000 4.0);
         fieldValues
         (
-            volScalarFieldValue p 101280.8
+            volScalarFieldValue p 84400.7
         );
     }
 
-    // Layer 4.0-5.0m: p = 101325 - 1.2*9.81*4.5 = 101271.9 Pa
+    // Layer 4.0-5.0m: p_k = 84437.5 - 9.81*4.5 = 84393.4 m²/s²
     boxToCell
     {
         box (-1000 -1000 4.0) (1000 1000 5.0);
         fieldValues
         (
-            volScalarFieldValue p 101271.9
+            volScalarFieldValue p 84393.4
         );
     }
 
-    // Layer 5.0-10.0m: p = 101325 - 1.2*9.81*7.5 = 101236.4 Pa
+    // Layer 5.0-10.0m: p_k = 84437.5 - 9.81*7.5 = 84363.9 m²/s²
     boxToCell
     {
         box (-1000 -1000 5.0) (1000 1000 10.0);
         fieldValues
         (
-            volScalarFieldValue p 101236.4
+            volScalarFieldValue p 84363.9
         );
     }
 );

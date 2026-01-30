@@ -37,7 +37,7 @@ def calculate_adaptive_cell_size(geo_mesh):
     max_dim = max(x_range, y_range, z_range)
     
     # Fixed cell size: 0.1m for uniform mesh
-    base_cell_size = 0.06
+    base_cell_size = 0.1
     logger.info(f"    * Geometry bounds: X={x_range:.2f}m, Y={y_range:.2f}m, Z={z_range:.2f}m")
     logger.info(f"    * Using FIXED cell size: {base_cell_size:.4f}m (uniform mesh)")
     logger.info(f"    * Expected cells in domain: ~{(x_range/base_cell_size) * (y_range/base_cell_size) * (z_range/base_cell_size):.0f}")
@@ -60,8 +60,8 @@ def generate_local_refinement_block(geo_df, base_cell_size):
     
     # 1. Critical patches (window/vent/door): cellSize = base/2
     critical_patterns = ['window', 'vent', 'door']
-    refinement_cell_size = base_cell_size / 1.0  # 0.025m for base 0.1m
-    refinement_thickness = base_cell_size / 1.0  # 0.05m for base 0.1m
+    refinement_cell_size = base_cell_size / 2.0  # 0.025m for base 0.1m
+    refinement_thickness = base_cell_size / 2.0  # 0.05m for base 0.1m
     
     for pattern in critical_patterns:
         # Check if any patch matches this pattern
@@ -101,7 +101,7 @@ def generate_local_refinement_block(geo_df, base_cell_size):
         
         # Log and create blocks for each type
         if obj_types['person']:
-            cell_size, thickness = base_cell_size / 8.0, base_cell_size / 4.0
+            cell_size, thickness = base_cell_size / 16.0, base_cell_size / 8.0
             logger.info(f"      → Person ({len(obj_types['person'])}): cellSize={cell_size:.4f}m (base/8), thickness={thickness:.4f}m")
             for patch_id in obj_types['person']:
                 logger.info(f"          - {patch_id}")
@@ -112,7 +112,7 @@ def generate_local_refinement_block(geo_df, base_cell_size):
     }}""")
         
         if obj_types['block']:
-            cell_size, thickness = base_cell_size / 2.0, base_cell_size
+            cell_size, thickness = base_cell_size / 4.0, base_cell_size
             logger.info(f"      → Block ({len(obj_types['block'])}): cellSize={cell_size:.4f}m (base/2), thickness={thickness:.4f}m")
             for patch_id in obj_types['block']:
                 logger.info(f"          - {patch_id}")
@@ -123,7 +123,7 @@ def generate_local_refinement_block(geo_df, base_cell_size):
     }}""")
         
         if obj_types['table']:
-            cell_size, thickness = base_cell_size / 4.0, base_cell_size
+            cell_size, thickness = base_cell_size / 8.0, base_cell_size
             logger.info(f"      → Mesa/Table ({len(obj_types['table'])}): cellSize={cell_size:.4f}m (base/2), thickness={thickness:.4f}m")
             for patch_id in obj_types['table']:
                 logger.info(f"          - {patch_id}")
@@ -134,7 +134,7 @@ def generate_local_refinement_block(geo_df, base_cell_size):
     }}""")
         
         if obj_types['chair']:
-            cell_size, thickness = base_cell_size / 10.0, base_cell_size / 4.0
+            cell_size, thickness = base_cell_size / 20.0, base_cell_size / 8.0
             logger.info(f"      → Silla/Chair ({len(obj_types['chair'])}): cellSize={cell_size:.4f}m (base/2), thickness={thickness:.4f}m")
             for patch_id in obj_types['chair']:
                 logger.info(f"          - {patch_id}")
@@ -145,7 +145,7 @@ def generate_local_refinement_block(geo_df, base_cell_size):
     }}""")
         
         if obj_types['stairs']:
-            cell_size, thickness = base_cell_size / 2.0, 2.0 * base_cell_size
+            cell_size, thickness = base_cell_size / 4.0, 4.0 * base_cell_size
             logger.info(f"      → Stairs ({len(obj_types['stairs'])}): cellSize={cell_size:.4f}m (base/2), thickness={thickness:.4f}m")
             for patch_id in obj_types['stairs']:
                 logger.info(f"          - {patch_id}")
@@ -156,7 +156,7 @@ def generate_local_refinement_block(geo_df, base_cell_size):
     }}""")
         
         if obj_types['other']:
-            cell_size, thickness = base_cell_size / 4.0, base_cell_size / 8.0
+            cell_size, thickness = base_cell_size / 8.0, base_cell_size / 16.0
             logger.info(f"      → Other objects ({len(obj_types['other'])}): cellSize={cell_size:.4f}m (base/4), thickness={thickness:.4f}m")
             for patch_id in obj_types['other']:
                 logger.info(f"          - {patch_id}")
@@ -176,7 +176,7 @@ def generate_boundary_layers_block(geo_df, base_cell_size):
     """Generate boundaryLayers block with global settings and critical patch overrides."""
     base_n_layers = 0
     base_thickness_ratio = 1
-    base_first_layer = base_cell_size * 0.8  # 0.02m for base 0.1m
+    base_first_layer = base_cell_size * 0.4  # 0.02m for base 0.1m
     
     critical_patterns = ['window', 'vent', 'door']
     critical_n_layers = 0
@@ -220,8 +220,8 @@ def create_meshDict(template_path, sim_path, stl_filename, geo_mesh, geo_df):
     # Calculate cell sizes
     base_cell_size = calculate_adaptive_cell_size(geo_mesh)
 
-    boundary_cell_size = base_cell_size / 1.0  # 0.05m for base 0.1m
-    min_cell_size = base_cell_size / 1.0     # 0.0125m for base 0.1m
+    boundary_cell_size = base_cell_size / 2.0  # 0.05m for base 0.1m
+    min_cell_size = base_cell_size / 2.0     # 0.0125m for base 0.1m
     
     # Generate dynamic blocks
     local_refinement = generate_local_refinement_block(geo_df, base_cell_size)

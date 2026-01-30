@@ -14,9 +14,10 @@ def load_foam_results(sim_path: str):
     
     foam_path = os.path.join(sim_path, "results.foam")
     
-    # Check if results.foam exists
+    # Check if results.foam exists, create if needed
     if not os.path.exists(foam_path):
-        raise FileNotFoundError(f"results.foam not found at: {foam_path}")
+        logger.info(f"    * Creating results.foam at: {foam_path}")
+        open(foam_path, 'a').close()
     
     logger.info(f"    * Loading results from: {foam_path}")
     
