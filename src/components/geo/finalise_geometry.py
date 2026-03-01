@@ -106,6 +106,22 @@ def apply_boundary_conditions_to_geometry(geometry_mesh: pv.PolyData, boundary_c
             geometry_mesh.cell_data['BC_type'][patch_cells] = 2  # Pressure outlet type
             geometry_mesh.cell_data['U'][patch_cells] = np.multiply(np.nan, np.column_stack([nx, ny, nz]))
             geometry_mesh.cell_data['T'][patch_cells] = [boundary_condition['T']] * len(patch_cells)
+        elif boundary_condition['type'] == 'mass_flow_inlet':
+            # Mass flow inlet: flow rate specified, temperature fixed, direction from normals
+            logger.info(f"    * Setting mass_flow_inlet boundary conditions for patch {patch_idx}")
+            surface_normals = geometry_mesh.cell_data['Normals'][patch_cells]
+            nx = -surface_normals[:, 0]
+            ny = -surface_normals[:, 1]
+            nz = -surface_normals[:, 2]
+
+            boundary_conditions_df.loc[patch_idx, 'nx'] = np.mean(nx)
+            boundary_conditions_df.loc[patch_idx, 'ny'] = np.mean(ny)
+            boundary_conditions_df.loc[patch_idx, 'nz'] = np.mean(nz)
+
+            geometry_mesh.cell_data['BC_type'][patch_cells] = 4  # mass_flow_inlet
+            geometry_mesh.cell_data['U'][patch_cells] = np.multiply(np.nan, np.column_stack([nx, ny, nz]))
+            geometry_mesh.cell_data['T'][patch_cells] = [boundary_condition['T']] * len(patch_cells)
+
         else:
             logger.error(f"    * Unknown boundary condition type: {boundary_condition['type']}")
             raise BaseException(f'Unknown boundary condition type: {boundary_condition["type"]}')

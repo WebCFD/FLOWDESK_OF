@@ -22,3 +22,5 @@ PYTHON_STEPS/outputs/*
 *.stlcases/*/sim/constant/polyMesh/faces
 cases/*
 PYTHON_STEPS/cases/*
+PYTHON_STEPS/JSON_EX/
+PYTHON_STEPS/cases/

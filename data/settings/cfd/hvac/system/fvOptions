@@ -39,5 +39,10 @@ limitU
 // This solver doesn't use thermophysicalProperties in the required format
 // Temperature is handled directly via T field with boundary conditions
 
+// NOTE: limitG removed - limitTemperature requires thermophysicalProperties
+// which is incompatible with buoyantBoussinesqSimpleFoam
+// Solution: Initialize G=100 (not zero) to prevent matrix singularity
+// GAMG solver + relaxation (G=0.7) provide sufficient numerical stability
+
 
 // ************************************************************************* //

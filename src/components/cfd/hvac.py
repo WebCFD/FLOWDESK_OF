@@ -51,7 +51,7 @@ INTERNALFIELD_DICT = {
     # 'h':        294515.75,  # h = Cp×T = 1005×293.15 for Boussinesq (20°C) [COMMENTED FOR TEST]
     'p':        0,          # Gauge pressure [m²/s²] - reference level (p = p_rgh + g·h)
     'p_rgh':    0,          # Dynamic pressure [m²/s²] - hydrostatic component excluded
-    'T':        293.15,     # Reference temperature for Boussinesq [K] (20°C)
+    'T':        297.15,     # Reference temperature for Boussinesq [K] (24°C)
     'U':        np.array([0, 0, 0]),  # Initial velocity (quiescent fluid - Boussinesq handles stability)
     
     # Turbulence fields (default values from OpenFOAM BC Guide)
@@ -65,11 +65,11 @@ INTERNALFIELD_DICT = {
     'nut':      0.02,       # Turbulent kinematic viscosity [m²/s] (nut = k/ω)
     
     # Scalar transport
-    'CO2':      400e-6,     # 400 ppm CO2 (exterior ambient)
+    'CO2':      1.0,        # 100% CO2 initial concentration (ventilation test scenario)
     
     # Radiation
     'qr':       0,          # Initial radiative flux (computed by solver)
-    'G':        0,          # Initial incident radiation (computed by solver)
+    'G':        450,        # Initial incident radiation [W/m²] - realistic for 25-30°C environment
 }
 
 # Reference values for pressure calculations
@@ -103,33 +103,24 @@ def define_system_files(template_path, sim_path):
 
 def define_boundary_radiation_properties(sim_path, patch_df):
     """
-    Create boundaryRadiationProperties file for radiation boundary conditions.
-    
-    This file is required when using MarshakRadiation BC with emissivityMode="lookup".
-    Uses a wildcard pattern ".*" to apply default radiation properties to all patches.
-    
-    TODO (FUTURE): Emissivity/absorptivity values should come from JSON input file
-    for patch-specific material properties.
-    
+    Create boundaryRadiationProperties with per-patch emissivity from patch_df.
+
+    Generates:
+    - Wildcard ".*" entry (default 0.9) as fallback for open boundaries
+    - Explicit per-wall-patch entry with emissivity from JSON simulationProperties
+
     Args:
         sim_path: Path to simulation directory
-        patch_df: DataFrame with patch information (id, type) - used for logging only
+        patch_df: DataFrame with columns: id, type, emissivity (from JSON)
     """
-    logger.info("    * Creating boundaryRadiationProperties file for radiation model")
-    
-    # Path to output file
+    logger.info("    * Creating per-patch boundaryRadiationProperties")
+
     constant_path = os.path.join(sim_path, 'constant')
     output_file = os.path.join(constant_path, 'boundaryRadiationProperties')
-    
-    # Default emissivity/absorptivity for typical building materials
-    # TODO (FUTURE): Make this configurable per-patch from JSON
-    default_emissivity = 0.9  # Typical for painted surfaces, concrete, plaster
-    default_absorptivity = 0.9  # For grey body assumption: absorptivity = emissivity
-    
-    # Build content string with OpenFOAM format
+
     content_lines = []
-    
-    # Add FoamFile header
+
+    # FoamFile header
     content_lines.append("/*--------------------------------*- C++ -*----------------------------------*\\")
     content_lines.append("| =========                 |                                                 |")
     content_lines.append("| \\\\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |")
@@ -146,31 +137,45 @@ def define_boundary_radiation_properties(sim_path, patch_df):
     content_lines.append("}")
     content_lines.append("// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //")
     content_lines.append("")
-    content_lines.append("// Default radiation properties for all boundary patches")
-    content_lines.append("// Using wildcard pattern \".*\" to apply to all patches")
-    content_lines.append("// TODO (FUTURE): Define patch-specific properties from JSON input")
-    content_lines.append("")
+    content_lines.append("// Wildcard fallback – covers open boundaries (zeroGradient G) harmlessly")
     content_lines.append('".*"')
     content_lines.append("{")
     content_lines.append("    type            opaqueDiffusive;")
     content_lines.append("    wallAbsorptionEmissionModel")
     content_lines.append("    {")
     content_lines.append("        type            constantAbsorption;")
-    content_lines.append(f"        absorptivity    {default_absorptivity};")
-    content_lines.append(f"        emissivity      {default_emissivity};")
+    content_lines.append("        absorptivity    0.9;")
+    content_lines.append("        emissivity      0.9;")
     content_lines.append("    }")
     content_lines.append("}")
     content_lines.append("")
+
+    # Per-patch entries for wall patches (override wildcard with JSON-defined emissivity)
+    wall_patches = patch_df[patch_df['type'] == 'wall'] if 'type' in patch_df.columns else patch_df
+    patches_written = 0
+    for _, row in wall_patches.iterrows():
+        patch_id  = row['id']
+        emissivity = float(row['emissivity']) if 'emissivity' in row and row['emissivity'] == row['emissivity'] else 0.9
+        content_lines.append(f'"{patch_id}"')
+        content_lines.append("{")
+        content_lines.append("    type            opaqueDiffusive;")
+        content_lines.append("    wallAbsorptionEmissionModel")
+        content_lines.append("    {")
+        content_lines.append("        type            constantAbsorption;")
+        content_lines.append(f"        absorptivity    {emissivity};")
+        content_lines.append(f"        emissivity      {emissivity};")
+        content_lines.append("    }")
+        content_lines.append("}")
+        content_lines.append("")
+        patches_written += 1
+
     content_lines.append("// ************************************************************************* //")
-    
-    # Write file
-    with open(output_file, 'w') as f:
+
+    with open(output_file, 'w', encoding='utf-8') as f:
         f.write('\n'.join(content_lines))
-    
-    logger.info(f"    * boundaryRadiationProperties created with wildcard pattern")
-    logger.info(f"    * Default emissivity/absorptivity: {default_emissivity}")
-    logger.info(f"    * Applies to {len(patch_df)} patches")
-    logger.info(f"    * File written to: {output_file}")
+
+    logger.info(f"    * boundaryRadiationProperties written: {patches_written} wall patches with per-patch emissivity")
+    logger.info(f"    * File: {output_file}")
 
 
 def create_decomposeParDict_local(sim_path):
@@ -343,13 +348,14 @@ def define_turbulence_bcs(variable, patch_type, patch_row):
     return bc
 
 
-def define_radiation_bcs(variable, patch_type):
+def define_radiation_bcs(variable, patch_type, patch_row=None):
     """
     Define boundary conditions for radiation fields (qr, G).
     
     Args:
         variable: 'qr' or 'G'
         patch_type: Type of patch
+        patch_row: Row from patch_df with boundary info (optional, for G initialization)
         
     Returns:
         dict: Boundary condition data
@@ -359,10 +365,18 @@ def define_radiation_bcs(variable, patch_type):
     if variable == 'G':
         if patch_type == 'wall':
             # Marshak radiation boundary condition for walls
+            # emissivityMode="lookup" reads from boundaryRadiationProperties (per-patch values)
+            # bc["emissivity"] here is a fallback – the lookup file takes precedence
             bc["type"] = "MarshakRadiation"
             bc["emissivityMode"] = "lookup"
-            bc["emissivity"] = 0.9  # Default wall emissivity
-            bc["value"] = 0
+            # Use per-patch emissivity from patch_df (via patch_row); fall back to 0.9
+            if patch_row is not None and 'emissivity' in patch_row:
+                emissivity_val = patch_row['emissivity']
+                bc["emissivity"] = float(emissivity_val) if emissivity_val == emissivity_val else 0.9
+            else:
+                bc["emissivity"] = 0.9
+            # Let MarshakRadiation calculate value automatically from T field
+            bc["value"] = INTERNALFIELD_DICT['G']
         else:
             # Zero gradient for inlets/outlets
             bc["type"] = "zeroGradient"
@@ -395,19 +409,13 @@ def define_scalar_bcs(variable, patch_type, patch_row):
     
     if variable == 'CO2':
         if patch_type in ['velocity_inlet', 'mass_flow_inlet']:
-            # Fixed CO2 concentration at inlet (ambient 400 ppm)
+            # Fixed CO2 concentration at inlet (fresh air without CO2)
             bc["type"] = "fixedValue"
-            bc["value"] = 400e-6  # 400 ppm
-        elif patch_type == 'pressure_inlet':
-            # Bidirectional CO2: inletOutlet for backflow scenarios
-            bc["type"] = "inletOutlet"
-            bc["inletValue"] = 400e-6  # Exterior air: 400 ppm
-            bc["value"] = INTERNALFIELD_DICT['CO2']
-        elif patch_type == 'pressure_outlet':
-            # Outlet: allow CO2 to leave, prevent backflow contamination
-            bc["type"] = "inletOutlet"
-            bc["inletValue"] = 400e-6
-            bc["value"] = INTERNALFIELD_DICT['CO2']
+            bc["value"] = 0.0  # Fresh air (0% CO2)
+        elif patch_type in ['pressure_inlet', 'pressure_outlet']:
+            # Ventana/puerta abierta: entra aire fresco sin CO2 (ventilation scenario)
+            bc["type"] = "fixedValue"
+            bc["value"] = 0.0  # Fresh air (0% CO2)
         elif patch_type == 'wall':
             # Walls: no CO2 flux (impermeable)
             bc["type"] = "zeroGradient"
@@ -518,7 +526,7 @@ def define_initial_files(sim_path, patch_df):
                     new_bc_data = define_turbulence_bcs(variable, patch_type, row)
                 # Handle radiation fields (qr, G) with dedicated function
                 elif variable in ['qr', 'G']:
-                    new_bc_data = define_radiation_bcs(variable, patch_type)
+                    new_bc_data = define_radiation_bcs(variable, patch_type, row)
                 # Handle scalar transport (CO2) with dedicated function
                 elif variable == 'CO2':
                     new_bc_data = define_scalar_bcs(variable, patch_type, row)
@@ -537,7 +545,7 @@ def define_initial_files(sim_path, patch_df):
                         new_bc_data["value"] = 0
                     elif(variable == 'T'):
                         new_bc_data["type"] = 'fixedValue'
-                        new_bc_data["value"] = row['T'] + 273.15
+                        new_bc_data["value"] = row['T_(°C)'] + 273.15
                     elif(variable == 'U'):
                         new_bc_data["type"] = 'noSlip'
                     else:
@@ -556,11 +564,11 @@ def define_initial_files(sim_path, patch_df):
                         new_bc_data["value"] = INTERNALFIELD_DICT[variable]
                     elif(variable == 'T'):
                         new_bc_data["type"] = 'fixedValue'
-                        new_bc_data["value"] = row['T'] + 273.15
+                        new_bc_data["value"] = row['T_(°C)'] + 273.15
                     elif(variable == 'U'):
                         if (row['open']):
                             new_bc_data["type"] = 'fixedValue'
-                            new_bc_data["value"] = row['U'] * np.array([row['nx'], row['ny'], row['nz']])
+                            new_bc_data["value"] = row['U_(m/s)'] * np.array([row['fluid_nx'], row['fluid_ny'], row['fluid_nz']])
                         else:
                             # Closed velocity_inlet behaves as wall with no-slip condition
                             new_bc_data["type"] = 'noSlip'
@@ -574,21 +582,21 @@ def define_initial_files(sim_path, patch_df):
                     if(variable == 'p'):
                         # Gauge kinematic pressure: convert Pa → m²/s²
                         new_bc_data["type"] = 'calculated'
-                        new_bc_data["value"] = row['pressure'] / RHO_REF
+                        new_bc_data["value"] = row['pressure_(Pa)'] / RHO_REF
                     elif(variable == 'p_rgh'):
                         # Convert pressure from Pa to kinematic (m²/s²) for Boussinesq solver
                         # p_rgh_kinematic = ΔP_Pa / rho_ref
                         new_bc_data["type"] = 'fixedValue'
-                        p_rgh_kinematic = row['pressure'] / RHO_REF  # Pa / (kg/m³) = m²/s²
+                        p_rgh_kinematic = row['pressure_(Pa)'] / RHO_REF  # Pa / (kg/m³) = m²/s²
                         new_bc_data["value"] = p_rgh_kinematic
-                        logger.info(f"    BC {row['id']} ({row['type']}): p_rgh = {p_rgh_kinematic:.2f} m²/s² (ΔP = {row['pressure']:.1f} Pa)")
+                        logger.info(f"    BC {row['id']} ({row['type']}): p_rgh = {p_rgh_kinematic:.2f} m²/s² (ΔP = {row['pressure_(Pa)']:.1f} Pa)")
                     elif(variable == 'T'):
                         # Bidirectional temperature: inletOutlet for backflow scenarios
                         new_bc_data["type"] = 'inletOutlet'
-                        T_exterior = row['T'] + 273.15  # Convert °C → K
+                        T_exterior = row['T_(°C)'] + 273.15  # Convert °C → K
                         new_bc_data["inletValue"] = T_exterior
                         new_bc_data["value"] = T_exterior
-                        logger.info(f"    BC {row['id']} ({row['type']}): T = {row['T']}°C = {T_exterior}K (inletOutlet)")
+                        logger.info(f"    BC {row['id']} ({row['type']}): T = {row['T_(°C)']}°C = {T_exterior}K (inletOutlet)")
                     elif(variable == 'U'):
                         if (row['open']):
                             # Use pressureInletOutletVelocity for pressure-driven inflow
@@ -607,21 +615,21 @@ def define_initial_files(sim_path, patch_df):
                     if(variable == 'p'):
                         # Gauge kinematic pressure: convert Pa → m²/s²
                         new_bc_data["type"] = 'calculated'
-                        new_bc_data["value"] = row['pressure'] / RHO_REF
+                        new_bc_data["value"] = row['pressure_(Pa)'] / RHO_REF
                     elif(variable == 'p_rgh'):
                         # Convert pressure from Pa to kinematic (m²/s²) for Boussinesq solver
                         # p_rgh_kinematic = ΔP_Pa / rho_ref (negative for outlet)
                         new_bc_data["type"] = 'fixedValue'
-                        p_rgh_kinematic = row['pressure'] / RHO_REF  # Pa / (kg/m³) = m²/s²
+                        p_rgh_kinematic = row['pressure_(Pa)'] / RHO_REF  # Pa / (kg/m³) = m²/s²
                         new_bc_data["value"] = p_rgh_kinematic
-                        logger.info(f"    BC {row['id']} ({row['type']}): p_rgh = {p_rgh_kinematic:.2f} m²/s² (ΔP = {row['pressure']:.1f} Pa)")
+                        logger.info(f"    BC {row['id']} ({row['type']}): p_rgh = {p_rgh_kinematic:.2f} m²/s² (ΔP = {row['pressure_(Pa)']:.1f} Pa)")
                     elif(variable == 'T'):
                         # Bidirectional temperature: inletOutlet for backflow scenarios
                         new_bc_data["type"] = 'inletOutlet'
-                        T_exterior = row['T'] + 273.15  # Convert °C → K
+                        T_exterior = row['T_(°C)'] + 273.15  # Convert °C → K
                         new_bc_data["inletValue"] = T_exterior
                         new_bc_data["value"] = T_exterior
-                        logger.info(f"    BC {row['id']} ({row['type']}): T = {row['T']}°C = {T_exterior}K (inletOutlet)")
+                        logger.info(f"    BC {row['id']} ({row['type']}): T = {row['T_(°C)']}°C = {T_exterior}K (inletOutlet)")
                     elif(variable == 'U'):
                         if (row['open']):
                             # Use pressureInletOutletVelocity for bidirectional pressure-driven flow
@@ -646,13 +654,18 @@ def define_initial_files(sim_path, patch_df):
                         new_bc_data["value"] = INTERNALFIELD_DICT[variable]
                     elif(variable == 'T'):
                         new_bc_data["type"] = 'fixedValue'
-                        new_bc_data["value"] = row['T'] + 273.15
+                        new_bc_data["value"] = row['T_(°C)'] + 273.15
                     elif(variable == 'U'):
-                        # Use flowRateInletVelocity for mass flow inlet
-                        # Convert m³/h to m³/s: massFlow (m³/h) / 3600
-                        new_bc_data["type"] = 'flowRateInletVelocity'
-                        new_bc_data["volumetricFlowRate"] = row['massFlow'] / 3600.0
-                        new_bc_data["value"] = INTERNALFIELD_DICT[variable]
+                        # Convert massFlow [m³/h] → velocity vector [m/s] with prescribed direction
+                        # Q [m³/s] = massFlow [m³/h] / 3600
+                        # U_mag [m/s] = Q [m³/s] / area [m²]  (area from JSON dimensions)
+                        # U_vec [m/s] = U_mag * (nx, ny, nz)  (flow direction from airOrientation)
+                        Q_m3s = row['massFlow_(m³/h)'] / 3600.0           # m³/h → m³/s
+                        area_m2 = float(row['area_(m²)']) if pd.notna(row.get('area', np.nan)) else 1.0
+                        U_mag = Q_m3s / area_m2                    # m/s
+                        new_bc_data["type"] = 'fixedValue'
+                        new_bc_data["value"] = U_mag * np.array([row['fluid_nx'], row['fluid_ny'], row['fluid_nz']])
+                        logger.info(f"    BC {row['id']} (mass_flow_inlet): Q={Q_m3s*3600:.1f} m³/h, A={area_m2:.4f} m², U_mag={U_mag:.2f} m/s")
                     else:
                         raise BaseException('Unknown variable')
                 else:
@@ -722,18 +735,34 @@ def setup(case_path: str, simulation_type: str = 'comfortTest', transient: bool 
         # Add functions{} block to controlDict
         controldict_path = os.path.join(sim_path, "system", "controlDict")
         
-        with open(controldict_path, 'r') as f:
+        with open(controldict_path, 'r', encoding='utf-8') as f:
             content = f.read()
+
+        # Insert massFlow functions INSIDE existing functions{} block
+        # Find the closing brace of functions{} and insert before it
+        import re
         
-        # Replace the comment line with actual functions
-        content = content.replace(
-            "// functions{} removed - Allrun uses foamToVTK for VTK generation (0 + latestTime only)",
-            mass_flow_functions
-        )
+        # Pattern: find "functions\n{\n ... \n}" and insert before final }
+        pattern = r'(functions\s*\{.*?)(^\})'
         
+        def insert_mass_flow(match):
+            functions_body = match.group(1)
+            closing_brace = match.group(2)
+            
+            # Add massFlow functions before closing brace
+            # Remove "functions\n{\n" prefix and final "}\n" from mass_flow_functions
+            mass_flow_clean = mass_flow_functions.replace('functions\n{\n', '', 1)
+            # Remove final "}\n" carefully (only the wrapper, not function braces)
+            if mass_flow_clean.endswith('}\n'):
+                mass_flow_clean = mass_flow_clean[:-2]  # Remove last "}\n"
+            
+            return functions_body + '\n' + mass_flow_clean + '\n' + closing_brace
+        
+        content = re.sub(pattern, insert_mass_flow, content, flags=re.MULTILINE | re.DOTALL)
+
         with open(controldict_path, 'w', encoding='utf-8') as f:
             f.write(content)
-        
+
         logger.info("    * Mass flow functions added to controlDict")
     
     logger.info("    * Creating decomposeParDict for local parallel execution")
@@ -779,7 +808,7 @@ def setup(case_path: str, simulation_type: str = 'comfortTest', transient: bool 
     script_commands.extend([
         # Generate VTK for time 0 (initial fields with hydrostatic pressure) - BEFORE potentialFoam
         'echo "==================== GENERATING VTK FOR TIME 0 (INITIAL STATE) ===================="',
-        'foamToVTK -time 0 -fields "(T U p p_rgh)" 2>&1 | tee log.foamToVTK_time0',  # [h REMOVED FOR TEST]
+        'foamToVTK -time 0 -fields "(T U p p_rgh G qr)" 2>&1 | tee log.foamToVTK_time0',  # Added G, qr for radiation
         'echo "==================== TIME 0 VTK COMPLETED ===================="',
         
         # Decompose for parallel execution
@@ -854,12 +883,12 @@ def setup(case_path: str, simulation_type: str = 'comfortTest', transient: bool 
         # Process all timesteps (no -latestTime flag)
         # -excludePatches: Skip internal patches to reduce file size
         # Note: Generates VTK/ directory with subdirs for each timestep
-        'runApplication foamToVTK -fields "(T U p p_rgh PMV PPD)" -excludePatches "(.*_master|.*_slave)"',
+        'runApplication foamToVTK -fields "(T U p p_rgh PMV PPD G qr)" -excludePatches "(.*_master|.*_slave)"',
         'echo "==================== VTK GENERATION COMPLETED ===================="',
         
         # Also generate lightweight surface-only VTK for quick preview
         'echo "==================== GENERATING SURFACE VTK (QUICK PREVIEW) ===================="',
-        'foamToVTK -latestTime -surfaceFields -fields "(T U p p_rgh PMV PPD)" 2>&1 | tee log.foamToVTK_surface',
+        'foamToVTK -latestTime -surfaceFields -fields "(T U p p_rgh PMV PPD G qr)" 2>&1 | tee log.foamToVTK_surface',
         'echo "==================== SURFACE VTK COMPLETED ===================="',
 
         # Clean processors

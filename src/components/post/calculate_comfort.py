@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.12
 """
 Calculate PMV/PPD thermal comfort fields from OpenFOAM T and U fields.
 Executes in Inductiva container after reconstructPar.
@@ -20,6 +20,8 @@ import argparse
 import numpy as np
 from foamlib import FoamCase
 import logging
+from pythermalcomfort.models import pmv_ppd_iso
+from pythermalcomfort.utilities import v_relative
 
 # HARDCODED COMFORT PARAMETERS (ISO 7730 standard office)
 MET = 1.0      # Metabolic rate [met] - sedentary office work
@@ -32,62 +34,39 @@ logger = logging.getLogger(__name__)
 
 def calculate_pmv_fanger(tdb, tr, vel, rh, met, clo):
     """
-    Calculate PMV (Predicted Mean Vote) using Fanger's equation (ISO 7730).
+    Calculate PMV using ISO 7730 standard via pythermalcomfort library.
+    
+    This is a wrapper function that calls the validated pythermalcomfort.models.pmv_ppd_iso()
+    implementation, which is compliant with ISO 7730-2005 standard.
     
     Args:
         tdb: Dry bulb air temperature [°C]
         tr: Mean radiant temperature [°C]
-        vel: Relative air velocity [m/s]
+        vel: Air velocity [m/s]
         rh: Relative humidity [%]
         met: Metabolic rate [met]
         clo: Clothing insulation [clo]
     
     Returns:
-        PMV value (thermal sensation scale: -3 cold, 0 neutral, +3 hot)
+        PMV value (Predicted Mean Vote)
     """
-    # Convert metabolic rate to W/m²
-    M = met * 58.15  # [W/m²]
-    W = 0.0  # External work [W/m²] (assumed zero for sedentary activities)
+    # Calculate relative velocity accounting for activity-generated air speed
+    vr = v_relative(v=vel, met=met)
     
-    # Clothing thermal resistance [m²·K/W]
-    Icl = clo * 0.155
+    # Call validated pythermalcomfort implementation
+    # limit_inputs=False allows calculations outside standard ranges (for extreme conditions)
+    result = pmv_ppd_iso(
+        tdb=tdb, 
+        tr=tr, 
+        vr=vr, 
+        rh=rh, 
+        met=met, 
+        clo=clo,
+        wme=0.0,  # External work = 0 (standard assumption)
+        limit_inputs=False  # Accept values outside standard comfort range
+    )
     
-    # Calculate clothing surface area factor
-    if Icl <= 0.078:
-        fcl = 1.0 + 1.290 * Icl
-    else:
-        fcl = 1.05 + 0.645 * Icl
-    
-    # Calculate partial vapor pressure [Pa]
-    pa = rh / 100.0 * 10.0 * np.exp(16.6536 - 4030.183 / (tdb + 235.0))
-    
-    # Calculate clothing surface temperature by iteration
-    tcl = tdb + 273.15  # Initial guess [K]
-    hc = 0.0  # Initialize convection coefficient
-    for _ in range(10):  # Iterative solution
-        hc = 2.38 * np.abs(tcl - tdb - 273.15) ** 0.25
-        if 12.1 * np.sqrt(vel) > hc:
-            hc = 12.1 * np.sqrt(vel)
-        
-        tcl_new = 35.7 - 0.028 * (M - W) - Icl * fcl * (
-            3.96e-8 * fcl * (tcl ** 4 - (tr + 273.15) ** 4) +
-            fcl * hc * (tcl - tdb - 273.15)
-        )
-        tcl = tcl_new + 273.15
-    
-    # Calculate heat transfer components
-    hl1 = 3.05e-3 * (5733.0 - 6.99 * (M - W) - pa)  # Heat loss by skin diffusion
-    hl2 = 0.42 * ((M - W) - 58.15) if (M - W) > 58.15 else 0.0  # Heat loss by sweating
-    hl3 = 1.7e-5 * M * (5867.0 - pa)  # Latent respiration heat loss
-    hl4 = 0.0014 * M * (34.0 - tdb)  # Dry respiration heat loss
-    hl5 = 3.96e-8 * fcl * (tcl ** 4 - (tr + 273.15) ** 4)  # Heat loss by radiation
-    hl6 = fcl * hc * (tcl - tdb - 273.15)  # Heat loss by convection
-    
-    # Calculate thermal load
-    ts = 0.303 * np.exp(-0.036 * M) + 0.028
-    pmv = ts * ((M - W) - hl1 - hl2 - hl3 - hl4 - hl5 - hl6)
-    
-    return pmv
+    return result.pmv
 
 
 def calculate_ppd(pmv):
@@ -128,6 +107,81 @@ def process_timestep(case, time_str):
         U_internal = U_field.internal_field  # [m/s]
         U_boundary = U_field.boundary_field
     
+    # Try to read incident radiation field G [W/m²] for accurate T_mrt calculation
+    logger.info("Reading incident radiation field (G)...")
+    G_internal = None
+    try:
+        with case[time_str]['G'] as G_field:
+            G_internal = G_field.internal_field  # [W/m²]
+        logger.info("✓ G field found - will calculate T_mrt from radiation")
+    except:
+        logger.warning("✗ G field not found - will use T_mrt = T_air (simplified)")
+    
+    # Handle uniform fields (when solver writes "uniform <value>" instead of cell-by-cell data)
+    # This happens when the field didn't evolve or converged to uniform value
+    
+    # Get number of cells from a non-uniform field or from boundary file
+    # Strategy: Try to read from p field (should always be non-uniform after simulation)
+    # If that fails, count from mesh files
+    try:
+        with case[time_str]['p'] as p_field:
+            p_internal = p_field.internal_field
+            if isinstance(p_internal, (int, float)):
+                # p is also uniform, need to read from mesh
+                raise ValueError("p is uniform, need mesh method")
+            n_cells = len(p_internal)
+            logger.info(f"Detected {n_cells} cells from p field")
+    except:
+        # Fallback: read from polyMesh/owner header
+        owner_file = os.path.join(case.path, 'constant', 'polyMesh', 'owner')
+        with open(owner_file, 'r') as f:
+            in_header = True
+            for line in f:
+                line_stripped = line.strip()
+                # Skip empty lines and comments
+                if not line_stripped or line_stripped.startswith('//') or line_stripped.startswith('/*'):
+                    continue
+                # Skip FoamFile dictionary
+                if '{' in line or '}' in line or line_stripped in ['FoamFile', 'version', 'format', 'class', 'object', 'note']:
+                    continue
+                # Check if line starts with a digit (could be version number or data count)
+                if line_stripped[0].isdigit() and ';' not in line:
+                    # This is likely the count line (number before opening parenthesis)
+                    n_internal_faces = int(line_stripped)
+                    # Number of cells is approximately n_internal_faces (close estimate)
+                    # But we need to count unique cell indices from owner list
+                    break
+            
+            # Now read owner list to get max cell index
+            reading_data = False
+            max_owner = -1
+            for line in f:
+                line_stripped = line.strip()
+                if line_stripped == '(':
+                    reading_data = True
+                    continue
+                if line_stripped == ')':
+                    break
+                if reading_data and line_stripped and not line_stripped.startswith('//'):
+                    owner_idx = int(line_stripped)
+                    if owner_idx > max_owner:
+                        max_owner = owner_idx
+            
+            n_cells = max_owner + 1
+            logger.info(f"Detected {n_cells} cells from polyMesh/owner")
+    
+    if isinstance(T_internal, (int, float)):
+        logger.info(f"  T is uniform field (value={T_internal:.2f} K), expanding to {n_cells} cells...")
+        T_internal = np.full(n_cells, T_internal)
+    
+    if isinstance(U_internal, (int, float)):
+        logger.info(f"  U is uniform field (value={U_internal:.2e} m/s), expanding to {n_cells} cells...")
+        U_internal = np.full((n_cells, 3), U_internal)
+    elif len(U_internal.shape) == 1 and U_internal.shape[0] == 3:
+        # U is a single 3D vector, expand to all cells
+        logger.info(f"  U is uniform 3D vector, expanding to {n_cells} cells...")
+        U_internal = np.tile(U_internal, (n_cells, 1))
+    
     n_cells = len(T_internal)
     logger.info(f"Number of cells: {n_cells}")
     
@@ -138,6 +192,11 @@ def process_timestep(case, time_str):
     U_mag = np.linalg.norm(U_internal, axis=1)
     
     logger.info("Calculating PMV/PPD fields...")
+    
+    # Debug: Sample first 5 cells
+    logger.info(f"\nDEBUG - Sample of first 5 cells:")
+    for i in range(min(5, n_cells)):
+        logger.info(f"  Cell {i}: T={T_celsius[i]:.2f}°C, U_mag={np.linalg.norm(U_internal[i]):.4f} m/s")
     
     # Initialize output arrays
     pmv_field = np.zeros(n_cells)
@@ -151,15 +210,43 @@ def process_timestep(case, time_str):
     INVALID_VALUE = -1000.0  # Sentinel value for invalid/out-of-range cells
     
     # Theoretical valid ranges for PMV and PPD results
-    PMV_MIN = -3.0  # Typical comfort range is -0.5 to +0.5, extreme is -3 to +3
-    PMV_MAX = 3.0
-    PPD_MIN = 0.0   # PPD is a percentage from 0% to 100%
+    # NOTE: ISO 7730 comfort range is -0.5 to +0.5, but PMV model can give values beyond [-3, +3]
+    # We accept wider range to capture extreme conditions (very cold/hot)
+    PMV_MIN = -10.0  # Accept very cold conditions
+    PMV_MAX = 10.0   # Accept very hot conditions
+    PPD_MIN = 0.0    # PPD is a percentage from 0% to 100%
     PPD_MAX = 100.0
     
     invalid_count = 0
     for i in range(n_cells):
         tdb = T_celsius[i]
-        tr = tdb  # Tmrt = Tair (simplification)
+        
+        # Calculate mean radiant temperature from incident radiation G
+        if G_internal is not None:
+            # G [W/m²] = 4σT_mrt⁴ (isotropic radiation equilibrium)
+            # σ = 5.67e-8 W/(m²·K⁴) (Stefan-Boltzmann constant)
+            # Solve for T_mrt: T_mrt = (G / (4σ))^0.25
+            sigma = 5.67e-8  # Stefan-Boltzmann constant [W/(m²·K⁴)]
+            
+            # Handle G expansion if uniform
+            if isinstance(G_internal, (int, float)):
+                G_val = G_internal
+            else:
+                G_val = G_internal[i]
+            
+            # Ensure G is positive (radiation intensity cannot be negative)
+            G_val = max(G_val, 0.1)  # Minimum 0.1 W/m² to avoid singularity
+            
+            # Calculate T_mrt [K] from incident radiation (CORRECTED with factor 4)
+            T_mrt_K = (G_val / (4 * sigma)) ** 0.25
+            tr = T_mrt_K - 273.15  # Convert to °C
+            
+            # Sanity check: T_mrt should be in reasonable range
+            tr = np.clip(tr, -10, 80)  # Clip to physical range [-10°C, 80°C]
+        else:
+            # Fallback: T_mrt = T_air (simplified - no radiation data)
+            tr = tdb
+        
         vel = U_mag[i]
         
         # Check if values are within valid range for PMV/PPD calculation

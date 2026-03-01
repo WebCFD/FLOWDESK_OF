@@ -44,8 +44,11 @@ divSchemes
     // Laminar stress tensor (for Boussinesq)
     div((nuEff*dev2(T(grad(U)))))   Gauss linear;
     
-    // Scalar transport (CO2)
-    div(phi,CO2)    bounded Gauss linearUpwind grad(CO2);
+    // Scalar transport (CO2) - upwind puro para máxima estabilidad [0,1]
+    div(phi,CO2)    bounded Gauss upwind;
+    
+    // Radiation P1 model
+    div(phi,G)      bounded Gauss upwind;
 }
 
 laplacianSchemes

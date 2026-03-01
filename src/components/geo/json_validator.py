@@ -629,18 +629,31 @@ def validate_single_air_entry(entry: Dict, location: str, results: Dict) -> bool
         is_valid = False
     else:
         dims = entry['dimensions']
-        if 'width' not in dims or 'height' not in dims:
-            add_error(results, 'missing_field', f"{location}.dimensions", "'dimensions' must have 'width' and 'height'")
-            is_valid = False
+        shape = dims.get('shape', 'rectangular')
+
+        if shape == 'circular':
+            if 'diameter' not in dims:
+                add_error(results, 'missing_field', f"{location}.dimensions.diameter",
+                         "'dimensions' with shape='circular' must have 'diameter'")
+                is_valid = False
+            elif not isinstance(dims['diameter'], (int, float)) or dims['diameter'] <= 0:
+                add_error(results, 'invalid_value', f"{location}.dimensions.diameter",
+                         f"'diameter' must be > 0 (got {dims['diameter']})")
+                is_valid = False
         else:
-            if not isinstance(dims['width'], (int, float)) or dims['width'] <= 0:
-                add_error(results, 'invalid_value', f"{location}.dimensions.width", 
-                         f"'width' must be > 0 (got {dims['width']})")
+            if 'width' not in dims or 'height' not in dims:
+                add_error(results, 'missing_field', f"{location}.dimensions",
+                         "'dimensions' must have 'width' and 'height' (or shape='circular' with 'diameter')")
                 is_valid = False
-            if not isinstance(dims['height'], (int, float)) or dims['height'] <= 0:
-                add_error(results, 'invalid_value', f"{location}.dimensions.height", 
-                         f"'height' must be > 0 (got {dims['height']})")
-                is_valid = False
+            else:
+                if not isinstance(dims['width'], (int, float)) or dims['width'] <= 0:
+                    add_error(results, 'invalid_value', f"{location}.dimensions.width",
+                             f"'width' must be > 0 (got {dims['width']})")
+                    is_valid = False
+                if not isinstance(dims['height'], (int, float)) or dims['height'] <= 0:
+                    add_error(results, 'invalid_value', f"{location}.dimensions.height",
+                             f"'height' must be > 0 (got {dims['height']})")
+                    is_valid = False
     
     # Check 'simulation' field
     if 'simulation' not in entry:
@@ -651,6 +664,185 @@ def validate_single_air_entry(entry: Dict, location: str, results: Dict) -> bool
         is_valid = False
     
     return is_valid
+
+
+# ============================================================================
+# PHASE 7: FURNITURE VALIDATION
+# ============================================================================
+
+# Face-based types require explicit 'faces' dict
+FACE_BASED_TYPES = {'rack', 'topVentBox', 'sideVentBox'}
+# Valid roles for face-based furniture faces
+VALID_FACE_ROLES = {'wall', 'inlet', 'outlet', 'vent'}
+# Standard 6-face names (any of them may be present)
+STANDARD_FACE_NAMES = {'front', 'back', 'left', 'right', 'top', 'bottom'}
+
+
+def validate_single_furniture(item: Dict, location: str, results: Dict) -> bool:
+    """Validate a single furniture item based on its type (from ID)."""
+    is_valid = True
+
+    # 'id' required
+    if 'id' not in item:
+        add_error(results, 'missing_field', f"{location}.id", "Missing required field 'id'")
+        return False
+    if not isinstance(item['id'], str) or not item['id']:
+        add_error(results, 'invalid_value', f"{location}.id", "'id' must be a non-empty string")
+        return False
+
+    # Extract object type from ID: "object_0F_rack_1" → "rack"
+    id_parts = item['id'].split('_')
+    object_type = id_parts[2] if len(id_parts) >= 3 else 'unknown'
+
+    # --- Face-based objects: rack, topVentBox, sideVentBox ---
+    if object_type in FACE_BASED_TYPES:
+        if 'faces' not in item:
+            add_error(results, 'missing_field', f"{location}.faces",
+                      f"Object type '{object_type}' requires a 'faces' dictionary")
+            return False
+        if not isinstance(item['faces'], dict):
+            add_error(results, 'invalid_type', f"{location}.faces", "'faces' must be a dictionary")
+            return False
+        if len(item['faces']) == 0:
+            add_error(results, 'empty_field', f"{location}.faces", "'faces' must not be empty")
+            return False
+
+        # Validate each face
+        for face_name, face_data in item['faces'].items():
+            face_loc = f"{location}.faces.{face_name}"
+
+            if face_name not in STANDARD_FACE_NAMES:
+                add_warning(results, 'unknown_face_name', face_loc,
+                            f"Non-standard face name '{face_name}' (expected one of {STANDARD_FACE_NAMES})")
+
+            if not isinstance(face_data, dict):
+                add_error(results, 'invalid_type', face_loc, "Face entry must be a dictionary")
+                is_valid = False
+                continue
+
+            # role required
+            if 'role' not in face_data:
+                add_error(results, 'missing_field', f"{face_loc}.role", "Missing required field 'role'")
+                is_valid = False
+            elif face_data['role'] not in VALID_FACE_ROLES:
+                add_error(results, 'invalid_value', f"{face_loc}.role",
+                          f"Invalid role '{face_data['role']}' (expected one of {VALID_FACE_ROLES})")
+                is_valid = False
+
+            # vertices required: list of 4 × [x, y, z]
+            if 'vertices' not in face_data:
+                add_error(results, 'missing_field', f"{face_loc}.vertices",
+                          "Missing required field 'vertices'")
+                is_valid = False
+            elif not isinstance(face_data['vertices'], list) or len(face_data['vertices']) != 4:
+                add_error(results, 'invalid_value', f"{face_loc}.vertices",
+                          f"'vertices' must be a list of exactly 4 points (got {len(face_data.get('vertices', []))})")
+                is_valid = False
+            else:
+                for v_idx, v in enumerate(face_data['vertices']):
+                    if not isinstance(v, list) or len(v) != 3:
+                        add_error(results, 'invalid_value', f"{face_loc}.vertices[{v_idx}]",
+                                  "Each vertex must be a list of 3 numbers [x, y, z]")
+                        is_valid = False
+
+            # temperature required in all faces
+            if 'temperature' not in face_data:
+                add_error(results, 'missing_field', f"{face_loc}.temperature",
+                          "Missing required field 'temperature'")
+                is_valid = False
+
+            # wall faces need emissivity + material
+            role = face_data.get('role', '')
+            if role == 'wall':
+                if 'emissivity' not in face_data:
+                    add_warning(results, 'missing_optional', f"{face_loc}.emissivity",
+                                "Wall face missing 'emissivity' – will default to 0.9")
+                if 'material' not in face_data:
+                    add_warning(results, 'missing_optional', f"{face_loc}.material",
+                                "Wall face missing 'material' – will default to 'default'")
+
+    # --- Block: box with position + dimensions (new) or scale (legacy) ---
+    elif object_type == 'block':
+        if 'position' not in item:
+            add_error(results, 'missing_field', f"{location}.position",
+                      "Block object requires 'position' field")
+            is_valid = False
+        else:
+            pos = item['position']
+            for axis in ('x', 'y', 'z'):
+                if axis not in pos:
+                    add_error(results, 'missing_field', f"{location}.position.{axis}",
+                              f"'position' missing '{axis}'")
+                    is_valid = False
+
+        has_new_dims  = 'dimensions' in item
+        has_legacy_scale = 'scale' in item
+
+        if not has_new_dims and not has_legacy_scale:
+            add_error(results, 'missing_field', f"{location}.dimensions",
+                      "Block object requires 'dimensions' (width, height, depth) or legacy 'scale' (x, y, z)")
+            is_valid = False
+        elif has_new_dims:
+            dims = item['dimensions']
+            for key in ('width', 'height', 'depth'):
+                if key not in dims:
+                    add_error(results, 'missing_field', f"{location}.dimensions.{key}",
+                              f"'dimensions' missing '{key}'")
+                    is_valid = False
+                elif not isinstance(dims[key], (int, float)) or dims[key] <= 0:
+                    add_error(results, 'invalid_value', f"{location}.dimensions.{key}",
+                              f"'{key}' must be a positive number")
+                    is_valid = False
+
+        if 'simulationProperties' not in item:
+            add_warning(results, 'missing_optional', f"{location}.simulationProperties",
+                        "Block missing 'simulationProperties' – defaults (T=20°C, ε=0.9) will be used")
+
+    # --- Legacy STL objects: person, table, armchair ---
+    else:
+        if 'position' not in item:
+            add_error(results, 'missing_field', f"{location}.position",
+                      f"Object '{object_type}' requires 'position' field")
+            is_valid = False
+
+    return is_valid
+
+
+def validate_furniture(json_data: Dict[str, Any], results: Dict):
+    """
+    Validate furniture objects for each floor level.
+
+    Supports three furniture categories:
+      - Face-based (rack, topVentBox, sideVentBox): explicit faces with roles
+      - Block: box with position + dimensions + simulationProperties
+      - Legacy STL (person, table, armchair): position + optional rotation/scale
+
+    The 'furniture' array is optional per level (no error if absent).
+    """
+    logger.info("  [7/7] Validating furniture objects...")
+
+    levels = json_data.get('levels', {})
+    total_items  = 0
+    valid_items  = 0
+
+    for level_name, level_data in levels.items():
+        furniture_list = level_data.get('furniture', [])
+        if not furniture_list:
+            continue
+
+        if not isinstance(furniture_list, list):
+            add_error(results, 'invalid_type', f"levels.{level_name}.furniture",
+                      "'furniture' must be a list")
+            continue
+
+        for idx, item in enumerate(furniture_list):
+            location = f"levels.{level_name}.furniture[{idx}]"
+            total_items += 1
+            if validate_single_furniture(item, location, results):
+                valid_items += 1
+
+    logger.info(f"    ✓ Furniture validated ({valid_items}/{total_items} items)")
+    results['stats']['total_furniture'] = total_items
 
 
 # ============================================================================
@@ -684,7 +876,8 @@ def validate_building_json(json_data: Dict[str, Any]) -> Dict[str, Any]:
             'valid_floors': 0,
             'total_walls': 0,
             'total_stairs': 0,
-            'total_air_entries': 0
+            'total_air_entries': 0,
+            'total_furniture': 0
         }
     }
     
@@ -702,6 +895,7 @@ def validate_building_json(json_data: Dict[str, Any]) -> Dict[str, Any]:
         validate_walls(json_data, results)
         validate_stairs(json_data, results)
         validate_air_entries(json_data, results)
+        validate_furniture(json_data, results)
     
     # Update stats
     if 'levels' in json_data:
@@ -716,6 +910,7 @@ def validate_building_json(json_data: Dict[str, Any]) -> Dict[str, Any]:
         logger.info(f"   - Total walls: {results['stats']['total_walls']}")
         logger.info(f"   - Total stairs: {results['stats']['total_stairs']}")
         logger.info(f"   - Total air entries: {results['stats']['total_air_entries']}")
+        logger.info(f"   - Total furniture: {results['stats']['total_furniture']}")
         
         if results['warnings']:
             logger.info(f"   - Warnings: {len(results['warnings'])}")

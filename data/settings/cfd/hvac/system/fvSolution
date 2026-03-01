@@ -96,8 +96,21 @@ solvers
 
     CO2
     {
-        $U;
-        relTol          0.001;
+        solver          smoothSolver;
+        smoother        symGaussSeidel;
+        tolerance       1e-7;
+        relTol          0.01;
+        minIter         1;
+        maxIter         50;
+    }
+
+    "G.*"
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-6;
+        relTol          0.01;
+        maxIter         100;
     }
 }
 
@@ -127,8 +140,10 @@ relaxationFactors
     equations
     {
         U               0.25;  // Extreme stability for strong buoyancy
-        T               0.35;  // Extreme stability for thermal coupling
+        T               0.55;  // Increased for faster convergence
         "(k|omega)"     0.5;   // Turbulence model stability
+        CO2             0.7;   // Conservadurismo scalar transport para evitar undershoots
+        G               0.3;   // Under-relaxation for radiation convergence
     }
 }
 

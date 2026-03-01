@@ -25,6 +25,12 @@ beta            3.4113e-03;   // [1/K] = 1/293.15
 // Reference temperature
 TRef            293.15;        // [K] (20°C)
 
+// Reference density (for Boussinesq with radiation)
+rhoRef          1.2;           // [kg/m³] Air at 20°C
+
+// Reference specific heat capacity (for radiation model)
+CpRef           1005;          // [J/(kg·K)] Air at constant pressure
+
 // Laminar Prandtl number
 Pr              0.7;
 
