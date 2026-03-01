@@ -599,8 +599,12 @@ def define_initial_files(sim_path, patch_df):
                         logger.info(f"    BC {row['id']} ({row['type']}): T = {row['T_(°C)']}°C = {T_exterior}K (inletOutlet)")
                     elif(variable == 'U'):
                         if (row['open']):
-                            # Use pressureInletOutletVelocity for pressure-driven inflow
-                            new_bc_data["type"] = 'pressureInletOutletVelocity'
+                            # pressureDirectedInletOutletVelocity: pressure-driven flow with constrained inlet direction
+                            # - inflow (phi<0): direction = fluid_nx/ny/nz (from airOrientation); magnitude from solver via p_rgh
+                            # - outflow (phi>0): zeroGradient (unconstrained, follows interior solution)
+                            # Works for both normal (airOrientation=0) and oblique (airOrientation≠0) cases
+                            new_bc_data["type"] = 'pressureDirectedInletOutletVelocity'
+                            new_bc_data["inletDirection"] = np.array([row['fluid_nx'], row['fluid_ny'], row['fluid_nz']])
                             new_bc_data["value"] = INTERNALFIELD_DICT[variable]
                         else:
                             # Closed pressure_inlet behaves as wall with no-slip condition
@@ -632,8 +636,12 @@ def define_initial_files(sim_path, patch_df):
                         logger.info(f"    BC {row['id']} ({row['type']}): T = {row['T_(°C)']}°C = {T_exterior}K (inletOutlet)")
                     elif(variable == 'U'):
                         if (row['open']):
-                            # Use pressureInletOutletVelocity for bidirectional pressure-driven flow
-                            new_bc_data["type"] = 'pressureInletOutletVelocity'
+                            # pressureDirectedInletOutletVelocity: pressure-driven flow with constrained inlet direction
+                            # - inflow (phi<0): direction = fluid_nx/ny/nz (from airOrientation); magnitude from solver via p_rgh
+                            # - outflow (phi>0): zeroGradient (unconstrained, follows interior solution)
+                            # Works for both normal (airOrientation=0) and oblique (airOrientation≠0) cases
+                            new_bc_data["type"] = 'pressureDirectedInletOutletVelocity'
+                            new_bc_data["inletDirection"] = np.array([row['fluid_nx'], row['fluid_ny'], row['fluid_nz']])
                             new_bc_data["value"] = INTERNALFIELD_DICT[variable]
                         else:
                             # Closed pressure_outlet behaves as wall with no-slip condition
