@@ -98,6 +98,7 @@ def _build_vent_bc(
     Single source of truth for open-vent BC dicts.
 
     Supports flowType: velocity | massFlow | pressure.
+    Supports airDirection: inflow | outflow | equilibrium.
     Used by both wall/floor/ceiling airEntries (get_entry_bc_dict)
     and face-based furniture vents (create_face_based_mesh).
     """
@@ -116,6 +117,13 @@ def _build_vent_bc(
             bc['type']     = 'pressure_inlet'
             bc['pressure'] = get_flow_value(flow_intensity, 'pressure', custom_value)
             bc['U']        = np.nan
+    elif air_direction == 'equilibrium':
+        # Neutral boundary: 0 Pa gauge, allows bidirectional flow driven by internal dynamics.
+        # Equivalent to pressure_outlet at 0 Pa: pressureDirectedInletOutletVelocity handles
+        # both inflow (constrained to inletDirection) and outflow (zeroGradient) automatically.
+        bc['type']     = 'pressure_outlet'
+        bc['pressure'] = 0.0
+        bc['U']        = np.nan
     else:  # outflow → always pressure_outlet as reference boundary
         bc['type']     = 'pressure_outlet'
         bc['pressure'] = (
@@ -574,6 +582,11 @@ def get_entry_bc_dict(data):
             # Pressure inlet: p = p_internal + ΔP (higher pressure pushes air in)
             new_patch['type'] = 'pressure_inlet'
             new_patch['pressure'] = delta_p  # Positive pressure differential
+        elif air_direction == 'equilibrium':
+            # Neutral boundary: 0 Pa gauge, lets internal dynamics determine flow direction.
+            # pressureDirectedInletOutletVelocity handles bidirectional flow automatically.
+            new_patch['type'] = 'pressure_outlet'
+            new_patch['pressure'] = 0.0
         else:  # outflow
             # Pressure outlet: p = p_internal - ΔP (lower pressure pulls air out)
             new_patch['type'] = 'pressure_outlet'
