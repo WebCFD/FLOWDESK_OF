@@ -138,62 +138,56 @@ def _build_vent_bc(
 def angles_to_direction_vector(vertical_angle: float, horizontal_angle: float, wall_normal: np.ndarray) -> np.ndarray:
     """
     Convert orientation angles to 3D direction vector for air flow.
-    
-    Applies vertical and horizontal angle rotations to the wall normal vector
-    to compute the actual flow direction for HVAC vents/grilles.
-    
+
+    Local coordinate system at the vent face (wall_normal = inward direction):
+        forward  = wall_normal (inward, perpendicular to wall)
+        up_wall  = vertical tangent of the wall surface (≈ global Z for vertical walls)
+        right    = cross(forward, up_wall)  (horizontal tangent)
+
+    Angle conventions:
+        vertical_angle   > 0 → downward deflection (chorro baja)
+                         < 0 → upward  deflection (chorro sube)
+        horizontal_angle > 0 → leftward  deflection (chorro gira a la izquierda)
+                         < 0 → rightward deflection (chorro gira a la derecha)
+
     Args:
-        vertical_angle: Vertical tilt angle in degrees (-45 to +45)
-                       Positive = upward tilt, Negative = downward tilt
-        horizontal_angle: Horizontal rotation angle in degrees (-45 to +45)
-                         Positive = clockwise, Negative = counterclockwise
-        wall_normal: Base normal vector of the wall [nx, ny, nz]
-    
+        vertical_angle:   Vertical  tilt  in degrees (–45 … +45)
+        horizontal_angle: Horizontal yaw   in degrees (–45 … +45)
+        wall_normal:      Inward normal vector [nx, ny, nz] (toward room interior)
+
     Returns:
         Normalized 3D direction vector for the air flow
     """
-    # Convert angles from degrees to radians
     v_rad = np.deg2rad(vertical_angle)
     h_rad = np.deg2rad(horizontal_angle)
-    
-    # Ensure wall_normal is a numpy array and normalized
+
+    # Normalise inward normal
     normal = np.array(wall_normal, dtype=float)
     normal = normal / np.linalg.norm(normal)
-    
-    # Find perpendicular vectors to create local coordinate system
-    # Choose an arbitrary vector not parallel to normal
-    if abs(normal[2]) < 0.9:
-        up = np.array([0, 0, 1])
-    else:
-        up = np.array([1, 0, 0])
-    
-    # Create orthogonal basis vectors
-    # right vector (tangent to wall, horizontal direction)
-    right = np.cross(normal, up)
-    right = right / np.linalg.norm(right)
-    
-    # up vector (tangent to wall, vertical direction)
-    up_wall = np.cross(right, normal)
-    up_wall = up_wall / np.linalg.norm(up_wall)
-    
-    # Apply rotations using rotation matrices
-    # Step 1: Rotate around the 'right' axis for vertical angle (pitch)
+
+    # Build local orthogonal frame at the vent face
+    world_up = np.array([0, 0, 1]) if abs(normal[2]) < 0.9 else np.array([1, 0, 0])
+    right    = np.cross(normal, world_up);  right    /= np.linalg.norm(right)
+    up_wall  = np.cross(right,  normal);    up_wall  /= np.linalg.norm(up_wall)
+
+    # ── Step 1: Vertical pitch (rotate around 'right' axis) ─────────────────
+    # v > 0 → down  →  subtract up_wall component
+    # v < 0 → up    →  add      up_wall component
     cos_v = np.cos(v_rad)
     sin_v = np.sin(v_rad)
-    direction = cos_v * normal + sin_v * up_wall
-    
-    # Step 2: Rotate around the 'normal' axis for horizontal angle (yaw)
-    # Use Rodrigues' rotation formula to preserve normal component
+    direction = cos_v * normal - sin_v * up_wall
+
+    # ── Step 2: Horizontal yaw (rotate around 'up_wall' axis) ───────────────
+    # Rodrigues' formula around up_wall (≈ Z for vertical walls):
+    #   cross(up_wall, forward) = right-like vector → h > 0 adds a component
+    #   that points LEFT (positive convention).
     cos_h = np.cos(h_rad)
     sin_h = np.sin(h_rad)
-    direction = (direction * cos_h + 
-                 np.cross(normal, direction) * sin_h + 
-                 normal * np.dot(normal, direction) * (1 - cos_h))
-    
-    # Normalize the final direction vector
-    direction = direction / np.linalg.norm(direction)
-    
-    return direction
+    direction = (direction * cos_h
+                 + np.cross(up_wall, direction) * sin_h
+                 + up_wall * np.dot(up_wall, direction) * (1 - cos_h))
+
+    return direction / np.linalg.norm(direction)
 
 
 ELEMENTS_MESHES = {
