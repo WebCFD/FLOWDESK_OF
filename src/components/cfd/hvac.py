@@ -681,6 +681,19 @@ def define_initial_files(sim_path, patch_df):
 
                 f.boundary_field[row['id']] = new_bc_data
 
+    # ── Post-process 0.orig/U: foamlib writes 'inletDirection (x y z)' ──────
+    # OpenFOAM (solver + foamToVTK) requires 'inletDirection uniform (x y z)'.
+    # foamlib adds 'uniform' only to the special 'value' key; all other vector
+    # entries in BC dicts are written without the keyword, causing a FATAL IO ERROR.
+    import re as _re
+    u_file = os.path.join(initial_path, 'U')
+    with open(u_file, 'r', encoding='utf-8') as _f:
+        _content = _f.read()
+    _content = _re.sub(r'(inletDirection\s+)(\()', r'\1uniform \2', _content)
+    with open(u_file, 'w', encoding='utf-8') as _f:
+        _f.write(_content)
+    logger.info("    * Fixed inletDirection keyword in 0.orig/U (added 'uniform')")
+
 
 def setup(case_path: str, simulation_type: str = 'comfortTest', transient: bool = False) -> list:
     """
