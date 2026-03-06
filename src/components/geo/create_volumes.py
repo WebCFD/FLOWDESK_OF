@@ -618,30 +618,39 @@ def get_entry_bc_dict(data):
         h = dims_for_area.get('height', 1.0)
         new_patch['area'] = w * h  # [m²]
 
-    # Face normal (from JSON position.normal)
+    # Face normal (from JSON position.normal) — OUTWARD (pointing toward exterior)
     wall_normal = np.array([
         data['position']['normal']['x'],
         data['position']['normal']['y'],
         data['position']['normal']['z']
     ])
 
-    # Fluid injection direction: normal rotated by airOrientation angles
-    # When angles=0,0 → fluid_n == n (same as face normal)
-    air_orientation = simulation.get('airOrientation', None)
-    if air_orientation and air_orientation.get('verticalAngle') is not None and air_orientation.get('horizontalAngle') is not None:
-        vertical_angle   = air_orientation.get('verticalAngle', 0.0)
-        horizontal_angle = air_orientation.get('horizontalAngle', 0.0)
-        direction_vector = angles_to_direction_vector(vertical_angle, horizontal_angle, wall_normal)
-    else:
-        direction_vector = wall_normal
+    # nx/ny/nz = JSON outward normal placeholders.
+    # finalise_geometry.py overwrites them with mesh-computed INWARD normals (single source of truth).
+    new_patch['nx']      = wall_normal[0]
+    new_patch['ny']      = wall_normal[1]
+    new_patch['nz']      = wall_normal[2]
+    # json_nx/ny/nz = raw JSON outward normal kept for coherence check in finalise_geometry.py
+    new_patch['json_nx'] = wall_normal[0]
+    new_patch['json_ny'] = wall_normal[1]
+    new_patch['json_nz'] = wall_normal[2]
 
-    # Both stored as LAST columns in CSV for readability
-    new_patch['nx']       = wall_normal[0]      # face normal
-    new_patch['ny']       = wall_normal[1]
-    new_patch['nz']       = wall_normal[2]
-    new_patch['fluid_nx'] = direction_vector[0]  # flow injection direction
-    new_patch['fluid_ny'] = direction_vector[1]
-    new_patch['fluid_nz'] = direction_vector[2]
+    # airOrientation angles (NaN if not present).
+    # finalise_geometry.py applies these on top of the mesh inward normal to get fluid_nx/ny/nz.
+    air_orientation = simulation.get('airOrientation', None)
+    if (air_orientation
+            and air_orientation.get('verticalAngle') is not None
+            and air_orientation.get('horizontalAngle') is not None):
+        new_patch['airOrientation_v'] = float(air_orientation.get('verticalAngle',   0.0))
+        new_patch['airOrientation_h'] = float(air_orientation.get('horizontalAngle', 0.0))
+    else:
+        new_patch['airOrientation_v'] = np.nan
+        new_patch['airOrientation_h'] = np.nan
+
+    # fluid_nx/ny/nz: NaN placeholders — computed in finalise_geometry.py from mesh inward normals
+    new_patch['fluid_nx'] = np.nan
+    new_patch['fluid_ny'] = np.nan
+    new_patch['fluid_nz'] = np.nan
 
     return new_patch
 

@@ -145,6 +145,12 @@ def run(json_payload: Dict[str, Any], case_name: str) -> Tuple[pv.PolyData, pd.D
     logger.info("5 - Exporting final geometry and boundary condition information")
     export_geo(case_name, final_geometry_mesh, boundary_conditions_df)
 
+    # Step 6: Save input JSON to geo folder for traceability
+    json_dest = os.path.join(os.getcwd(), 'cases', case_name, 'geo', 'building_config.json')
+    with open(json_dest, 'w', encoding='utf-8') as _f:
+        json.dump(json_payload, _f, indent=2, ensure_ascii=False)
+    logger.info(f"6 - Input JSON saved to: {json_dest}")
+
     logger.info(f"✅ Geometry creation pipeline completed successfully:")
     return final_geometry_mesh, boundary_conditions_df
 
