@@ -629,11 +629,9 @@ def get_entry_bc_dict(data):
     new_patch['json_ny'] = wall_normal[1]
     new_patch['json_nz'] = wall_normal[2]
 
-    # ── Flow direction (NEW schema v2) ──────────────────────────────────────
-    # Frontend pre-computes the exact 3D unit vector (matches the green arrows
-    # drawn on the canvas) and writes it as simulation.flowDirection {x,y,z}.
-    # This is the canonical source of truth — no angle interpolation needed on
-    # the backend.  The angle fields are kept only as human-readable reference.
+    # ── Flow direction — frontend pre-computes the exact unit vector ─────────
+    # simulation.flowDirection {x, y, z} matches the green arrows on the canvas.
+    # finalise_geometry.py normalises and uses it directly as fluid_nx/ny/nz.
     flow_dir = simulation.get('flowDirection', None)
     if (flow_dir
             and flow_dir.get('x') is not None
@@ -646,26 +644,6 @@ def get_entry_bc_dict(data):
         new_patch['fd_x'] = np.nan
         new_patch['fd_y'] = np.nan
         new_patch['fd_z'] = np.nan
-
-    # Reference angle fields (top-level in new schema, nested in old schema).
-    # Stored for logging/debug only — the backend does NOT use them to compute
-    # flow direction when fd_x/fd_y/fd_z are present.
-    new_patch['airOrientation_v'] = float(simulation.get('verticalAngle', np.nan))
-    new_patch['airOrientation_h'] = float(simulation.get('horizontalAngle', np.nan))
-
-    # ── [LEGACY] airOrientation fallback ────────────────────────────────────
-    # OLD schema: simulation.airOrientation.{verticalAngle, horizontalAngle}
-    # Used only when flowDirection is absent (i.e. fd_x is NaN).
-    # finalise_geometry.py will call angles_to_direction_vector() with these.
-    # Remove this block once all JSON exports use the new schema (v2+).
-    if pd.isna(new_patch['fd_x']):
-        _legacy_ao = simulation.get('airOrientation', None)
-        if (_legacy_ao
-                and _legacy_ao.get('verticalAngle') is not None
-                and _legacy_ao.get('horizontalAngle') is not None):
-            new_patch['airOrientation_v'] = float(_legacy_ao.get('verticalAngle',   0.0))
-            new_patch['airOrientation_h'] = float(_legacy_ao.get('horizontalAngle', 0.0))
-    # ── end LEGACY ──────────────────────────────────────────────────────────
 
     # fluid_nx/ny/nz: NaN placeholders — written by finalise_geometry.py
     new_patch['fluid_nx'] = np.nan

@@ -15,34 +15,23 @@ def _compute_fluid_direction(
     """
     Compute the fluid flow direction for an open boundary patch.
 
-    Priority (highest → lowest):
-      1. NEW schema (v2+): simulation.flowDirection → stored as fd_x/fd_y/fd_z in the row.
-         The frontend pre-computes the exact unit vector that matches the canvas arrows.
-         Just normalise for safety and use directly. No backend angle maths needed.
+    Uses simulation.flowDirection {x,y,z} (fd_x/fd_y/fd_z in the row), pre-computed
+    by the frontend to match exactly the green arrows drawn on the canvas.
+    Falls back to mesh inward normal when flowDirection is absent.
 
-      2. [LEGACY] OLD schema: simulation.airOrientation.{verticalAngle, horizontalAngle}
-         → stored as airOrientation_v / airOrientation_h in the row.
-         Backend calls angles_to_direction_vector() to reconstruct the direction.
-         Remove this path once all JSON exports have been migrated to schema v2+.
-
-      3. Fallback: use mesh inward normal (no angular deflection).
-
-    In all cases the coherence check between mesh inward normal and JSON outward normal
-    is performed first (logs a warning if they disagree by > 1°).
+    Also performs a coherence check between the mesh inward normal and the JSON outward
+    normal (logs a warning if they disagree by > 1°).
 
     Args:
-        inward_mean : mean inward normal computed from PyVista mesh surface normals
+        inward_mean : mean inward normal from PyVista mesh normals
                       (already negated: = -mean(surface_normals))
         row         : boundary condition DataFrame row; may contain:
-                        json_nx/ny/nz     → JSON outward normal (coherence check)
-                        fd_x/fd_y/fd_z    → pre-computed direction (new schema)
-                        airOrientation_v/h → legacy angle fields
+                        json_nx/ny/nz  → JSON outward normal (coherence check)
+                        fd_x/fd_y/fd_z → pre-computed flow direction (schema v2)
 
     Returns:
         np.ndarray shape (3,), normalised inward flow direction
     """
-    from src.components.geo.create_volumes import angles_to_direction_vector
-
     # ── Coherence check: mesh inward vs -(JSON outward normal) ──────────────
     if all(c in row.index for c in ('json_nx', 'json_ny', 'json_nz')):
         jn = np.array([row['json_nx'], row['json_ny'], row['json_nz']], dtype=float)
@@ -79,16 +68,7 @@ def _compute_fluid_direction(
             return fd / fd_norm
         logger.warning(f"    ⚠️  fd_x/y/z zero vector for '{row['id']}' — falling back to mesh normal")
 
-    # ── Priority 2 — [LEGACY] angle-based computation ───────────────────────
-    # OLD schema: simulation.airOrientation.{verticalAngle, horizontalAngle}
-    # REMOVE this block once all JSON exports have been migrated to schema v2+.
-    v = row.get('airOrientation_v', np.nan)
-    h = row.get('airOrientation_h', np.nan)
-
-    if pd.notna(v) and pd.notna(h):
-        return angles_to_direction_vector(float(v), float(h), base)
-
-    # ── Priority 3 — Fallback: mesh inward normal, no deflection ────────────
+    # Fallback: mesh inward normal (no angular deflection)
     return base
 
 
