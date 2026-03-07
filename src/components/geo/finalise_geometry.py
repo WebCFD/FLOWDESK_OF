@@ -61,15 +61,19 @@ def _compute_fluid_direction(
     fd_y = row.get('fd_y', np.nan)
     fd_z = row.get('fd_z', np.nan)
 
-    if pd.notna(fd_x) and pd.notna(fd_y) and pd.notna(fd_z):
-        fd = np.array([float(fd_x), float(fd_y), float(fd_z)], dtype=float)
-        fd_norm = np.linalg.norm(fd)
-        if fd_norm > 1e-9:
-            return fd / fd_norm
-        logger.warning(f"    ⚠️  fd_x/y/z zero vector for '{row['id']}' — falling back to mesh normal")
-
-    # Fallback: mesh inward normal (no angular deflection)
-    return base
+    if not (pd.notna(fd_x) and pd.notna(fd_y) and pd.notna(fd_z)):
+        raise ValueError(
+            f"Patch '{row['id']}' is missing fd_x/y/z. "
+            f"simulation.flowDirection must be exported by the frontend."
+        )
+    fd = np.array([float(fd_x), float(fd_y), float(fd_z)], dtype=float)
+    fd_norm = np.linalg.norm(fd)
+    if fd_norm < 1e-9:
+        raise ValueError(
+            f"Patch '{row['id']}': fd_x/y/z is a zero vector — "
+            f"flowDirection must be a non-zero unit vector."
+        )
+    return fd / fd_norm
 
 
 def apply_boundary_conditions_to_geometry(geometry_mesh: pv.PolyData, boundary_conditions_df: pd.DataFrame) -> Tuple[pv.PolyData, pd.DataFrame]:

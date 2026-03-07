@@ -629,21 +629,22 @@ def get_entry_bc_dict(data):
     new_patch['json_ny'] = wall_normal[1]
     new_patch['json_nz'] = wall_normal[2]
 
-    # ── Flow direction — frontend pre-computes the exact unit vector ─────────
-    # simulation.flowDirection {x, y, z} matches the green arrows on the canvas.
-    # finalise_geometry.py normalises and uses it directly as fluid_nx/ny/nz.
+    # ── Flow direction — required field for all open entries ─────────────────
+    # simulation.flowDirection {x, y, z} must be exported by the frontend and
+    # must match the green arrows drawn on the canvas.
+    # Raises ValueError immediately if missing — no silent fallback.
     flow_dir = simulation.get('flowDirection', None)
-    if (flow_dir
-            and flow_dir.get('x') is not None
-            and flow_dir.get('y') is not None
-            and flow_dir.get('z') is not None):
-        new_patch['fd_x'] = float(flow_dir['x'])
-        new_patch['fd_y'] = float(flow_dir['y'])
-        new_patch['fd_z'] = float(flow_dir['z'])
-    else:
-        new_patch['fd_x'] = np.nan
-        new_patch['fd_y'] = np.nan
-        new_patch['fd_z'] = np.nan
+    if (not flow_dir
+            or flow_dir.get('x') is None
+            or flow_dir.get('y') is None
+            or flow_dir.get('z') is None):
+        raise ValueError(
+            f"Open entry '{patch_id}' is missing simulation.flowDirection. "
+            f"All open airEntries must export flowDirection {{x, y, z}} from the frontend."
+        )
+    new_patch['fd_x'] = float(flow_dir['x'])
+    new_patch['fd_y'] = float(flow_dir['y'])
+    new_patch['fd_z'] = float(flow_dir['z'])
 
     # fluid_nx/ny/nz: NaN placeholders — written by finalise_geometry.py
     new_patch['fluid_nx'] = np.nan
