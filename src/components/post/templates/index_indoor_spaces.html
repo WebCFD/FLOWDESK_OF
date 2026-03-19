@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowDesk — Simulation Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-primary: #0F4C75;
+            --brand-dark: #0B3954;
+            --brand-accent: #00B4D8;
+            --brand-light: #CAF0F8;
+            --surface: #F7F9FC;
+            --surface-hover: #EDF1F7;
+            --border: #E2E8F0;
+            --text-primary: #1A202C;
+            --text-secondary: #64748B;
+            --white: #FFFFFF;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+            --shadow-lg: 0 10px 30px rgba(0,0,0,0.08);
+            --radius: 10px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--surface);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand-primary) 60%, #1B6FA0 100%);
+            padding: 0 0 0 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(0,180,216,0.12) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .header-inner {
+            max-width: 880px;
+            margin: 0 auto;
+            padding: 32px 24px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-mark {
+            width: 44px;
+            height: 44px;
+            background: var(--white);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--brand-primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            letter-spacing: -0.5px;
+        }
+
+        .header-title {
+            color: var(--white);
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .header-subtitle {
+            color: rgba(255,255,255,0.6);
+            font-size: 13px;
+            font-weight: 400;
+            margin-top: 2px;
+        }
+
+        .header-badge {
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.85);
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 6px 14px;
+            border-radius: 20px;
+            backdrop-filter: blur(8px);
+        }
+
+        /* ── Main ── */
+        .main {
+            max-width: 880px;
+            margin: -16px auto 40px;
+            padding: 0 24px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ── Report Cards ── */
+        .report-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .report-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .report-card:first-child {
+            border-radius: var(--radius) var(--radius) 4px 4px;
+        }
+
+        .report-card:last-child {
+            border-radius: 4px 4px var(--radius) var(--radius);
+        }
+
+        .report-card:only-child {
+            border-radius: var(--radius);
+        }
+
+        .report-card:hover {
+            box-shadow: var(--shadow-md);
+            border-color: var(--brand-accent);
+            transform: translateY(-1px);
+        }
+
+        .report-link {
+            display: flex;
+            align-items: center;
+            padding: 18px 24px;
+            text-decoration: none;
+            color: var(--text-primary);
+            gap: 16px;
+            cursor: pointer;
+        }
+
+        .report-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 18px;
+        }
+
+        .icon-comfort { background: #FFF5F5; color: #E53E3E; }
+        .icon-flow    { background: #EBF8FF; color: #3182CE; }
+        .icon-setup   { background: #F0FFF4; color: #38A169; }
+        .icon-vent    { background: #FAF5FF; color: #805AD5; }
+
+        .report-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .report-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.2px;
+        }
+
+        .report-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .report-arrow {
+            color: var(--text-secondary);
+            font-size: 18px;
+            transition: transform 0.2s ease, color 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .report-card:hover .report-arrow {
+            transform: translateX(3px);
+            color: var(--brand-accent);
+        }
+
+        /* ── Data Files Section ── */
+        .section-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-secondary);
+            margin: 32px 0 12px 4px;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .data-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+        }
+
+        .data-card:hover {
+            box-shadow: var(--shadow-md);
+            border-color: var(--brand-accent);
+        }
+
+        .data-link {
+            display: flex;
+            align-items: center;
+            padding: 14px 18px;
+            text-decoration: none;
+            color: var(--text-primary);
+            gap: 10px;
+        }
+
+        .data-icon {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 500;
+            background: var(--surface);
+            color: var(--text-secondary);
+            padding: 4px 7px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .data-name {
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ── Footer ── */
+        .footer {
+            max-width: 880px;
+            margin: 0 auto;
+            padding: 24px 24px 40px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .footer a {
+            color: var(--brand-primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* ── Animations ── */
+        .report-card, .data-card {
+            opacity: 0;
+            transform: translateY(8px);
+            animation: slideIn 0.35s ease forwards;
+        }
+
+        .report-card:nth-child(1) { animation-delay: 0.05s; }
+        .report-card:nth-child(2) { animation-delay: 0.10s; }
+        .report-card:nth-child(3) { animation-delay: 0.15s; }
+        .report-card:nth-child(4) { animation-delay: 0.20s; }
+
+        .data-card:nth-child(1) { animation-delay: 0.25s; }
+        .data-card:nth-child(2) { animation-delay: 0.28s; }
+        .data-card:nth-child(3) { animation-delay: 0.31s; }
+        .data-card:nth-child(4) { animation-delay: 0.34s; }
+        .data-card:nth-child(5) { animation-delay: 0.37s; }
+
+        @keyframes slideIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 600px) {
+            .header-inner { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .data-grid { grid-template-columns: 1fr; }
+            .report-link { padding: 16px 18px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-inner">
+            <div class="header-left">
+                <div class="logo-mark">Fd</div>
+                <div>
+                    <div class="header-title">FlowDesk Simulation Report</div>
+                    <div class="header-subtitle">CFD Thermal Comfort Analysis</div>
+                </div>
+            </div>
+            <div class="header-badge">v0.1 · OpenFOAM</div>
+        </div>
+    </div>
+
+    <div class="main">
+
+        <div class="section-label">Reports</div>
+
+        <div class="report-list">
+            <div class="report-card">
+                <a class="report-link" href="comfort_report.html">
+                    <div class="report-icon icon-comfort">🌡</div>
+                    <div class="report-info">
+                        <div class="report-name">Comfort Report</div>
+                        <div class="report-desc">PMV/PPD thermal comfort analysis — ISO 7730</div>
+                    </div>
+                    <span class="report-arrow">›</span>
+                </a>
+            </div>
+
+            <div class="report-card">
+                <a class="report-link" href="flow_report.html">
+                    <div class="report-icon icon-flow">💨</div>
+                    <div class="report-info">
+                        <div class="report-name">Flow Report</div>
+                        <div class="report-desc">Airflow distribution and velocity fields</div>
+                    </div>
+                    <span class="report-arrow">›</span>
+                </a>
+            </div>
+
+            <div class="report-card">
+                <a class="report-link" href="ventilation_report.html">
+                    <div class="report-icon icon-vent">🔄</div>
+                    <div class="report-info">
+                        <div class="report-name">Ventilation Report</div>
+                        <div class="report-desc">Air changes, CO₂ concentration and fresh air rates</div>
+                    </div>
+                    <span class="report-arrow">›</span>
+                </a>
+            </div>
+
+            <div class="report-card">
+                <a class="report-link" href="setup_report.html">
+                    <div class="report-icon icon-setup">⚙</div>
+                    <div class="report-info">
+                        <div class="report-name">Setup Report</div>
+                        <div class="report-desc">Simulation configuration, mesh and solver settings</div>
+                    </div>
+                    <span class="report-arrow">›</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="section-label">Data Files</div>
+
+        <div class="data-grid">
+            <div class="data-card">
+                <a class="data-link" href="comfort_metrics.json" target="_blank">
+                    <span class="data-icon">JSON</span>
+                    <span class="data-name">comfort_metrics.json</span>
+                </a>
+            </div>
+            <div class="data-card">
+                <a class="data-link" href="flow_metrics.json" target="_blank">
+                    <span class="data-icon">JSON</span>
+                    <span class="data-name">flow_metrics.json</span>
+                </a>
+            </div>
+            <div class="data-card">
+                <a class="data-link" href="ventilation_metrics.json" target="_blank">
+                    <span class="data-icon">JSON</span>
+                    <span class="data-name">ventilation_metrics.json</span>
+                </a>
+            </div>
+            <div class="data-card">
+                <a class="data-link" href="setup_summary.json" target="_blank">
+                    <span class="data-icon">JSON</span>
+                    <span class="data-name">setup_summary.json</span>
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        FlowDesk © 2025 · F1-Grade CFD for Building Wellbeing · <a href="https://flowdesk.es">flowdesk.es</a>
+    </div>
+
+</body>
+</html>

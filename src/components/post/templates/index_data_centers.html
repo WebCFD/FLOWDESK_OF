@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data Center CFD Report</title>
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────────────────── */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+                   'Helvetica Neue', Arial, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+    }
+
+    /* ── Header ───────────────────────────────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+      padding: 48px 40px 36px;
+      text-align: center;
+      border-bottom: 2px solid #30363d;
+    }
+    .header h1 {
+      font-size: 2.6em;
+      font-weight: 300;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+      color: #f0f6fc;
+    }
+    .header .badge {
+      display: inline-block;
+      background: #0f3460;
+      border: 1px solid #1f6feb;
+      color: #79c0ff;
+      font-size: 0.85em;
+      padding: 4px 16px;
+      border-radius: 20px;
+      margin-top: 8px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .header .meta {
+      margin-top: 14px;
+      font-size: 0.9em;
+      color: #8b949e;
+    }
+
+    /* ── KPI bar ──────────────────────────────────────────────────────────── */
+    .kpi-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 16px;
+      padding: 32px 24px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+    }
+    .kpi-card {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 20px 28px;
+      min-width: 160px;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    .kpi-card:hover { border-color: #58a6ff; }
+    .kpi-label {
+      font-size: 0.72em;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #8b949e;
+      margin-bottom: 8px;
+    }
+    .kpi-value {
+      font-size: 2.1em;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .kpi-note {
+      font-size: 0.7em;
+      color: #6e7681;
+      margin-top: 6px;
+    }
+    /* KPI color states */
+    .ok     { color: #3fb950; }
+    .warn   { color: #d29922; }
+    .danger { color: #f85149; }
+    .info   { color: #58a6ff; }
+
+    /* ── Main grid ────────────────────────────────────────────────────────── */
+    .main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 24px 60px;
+    }
+
+    .section-title {
+      font-size: 1.1em;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #8b949e;
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #30363d;
+    }
+
+    /* ── Report cards grid ────────────────────────────────────────────────── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 48px;
+    }
+
+    .report-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+    .report-card:hover {
+      border-color: #58a6ff;
+      box-shadow: 0 4px 24px rgba(88, 166, 255, 0.12);
+    }
+
+    .card-icon-bar {
+      height: 6px;
+    }
+    .card-icon-bar.thermal  { background: linear-gradient(90deg, #f85149, #ff9500); }
+    .card-icon-bar.rack     { background: linear-gradient(90deg, #3fb950, #58a6ff); }
+    .card-icon-bar.airflow  { background: linear-gradient(90deg, #58a6ff, #bc8cff); }
+
+    .card-body { padding: 24px; }
+
+    .card-icon {
+      font-size: 2.4em;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 1.2em;
+      font-weight: 600;
+      color: #f0f6fc;
+      margin-bottom: 8px;
+    }
+    .card-desc {
+      font-size: 0.88em;
+      color: #8b949e;
+      line-height: 1.6;
+    }
+
+    .card-metrics {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #30363d;
+    }
+    .card-metric-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82em;
+      padding: 4px 0;
+      color: #8b949e;
+    }
+    .card-metric-row span:last-child {
+      font-weight: 600;
+      color: #e6edf3;
+    }
+
+    .card-footer {
+      padding: 14px 24px;
+      background: #0d1117;
+      border-top: 1px solid #30363d;
+      font-size: 0.82em;
+      color: #58a6ff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .card-footer::after { content: "→"; }
+
+    /* ── Standards section ────────────────────────────────────────────────── */
+    .standards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+    .standard-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .standard-card h4 {
+      font-size: 0.95em;
+      color: #58a6ff;
+      margin-bottom: 10px;
+    }
+    .standard-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82em;
+      padding: 5px 0;
+      border-bottom: 1px solid #21262d;
+    }
+    .standard-row:last-child { border-bottom: none; }
+    .standard-row .param { color: #8b949e; }
+    .standard-row .val   { color: #e6edf3; font-weight: 500; }
+
+    /* ── Footer ───────────────────────────────────────────────────────────── */
+    .footer {
+      background: #161b22;
+      border-top: 1px solid #30363d;
+      padding: 24px 40px;
+      text-align: center;
+      font-size: 0.82em;
+      color: #6e7681;
+    }
+    .footer a { color: #58a6ff; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+
+    /* ── Responsive ───────────────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .cards-grid      { grid-template-columns: 1fr; }
+      .standards-grid  { grid-template-columns: 1fr; }
+      .kpi-bar         { gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ─────────────────────────────────────────────────────────────── -->
+<div class="header">
+  <h1>Data Center Cooling Analysis</h1>
+  <div class="badge">OpenFOAM CFD Report</div>
+  <div class="meta">
+    Simulation type: <strong>DataCenters</strong> &nbsp;|&nbsp;
+    Standard: <strong>ASHRAE TC9.9 — Class A2</strong>
+  </div>
+</div>
+
+<!-- ── KPI BAR ────────────────────────────────────────────────────────────── -->
+<div class="kpi-bar">
+
+  <div class="kpi-card">
+    <div class="kpi-label">RCI High</div>
+    <div class="kpi-value" id="kpi-rci-hi">—</div>
+    <div class="kpi-note">Overheating risk &nbsp;|&nbsp; Target ≥ 96%</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">RCI Low</div>
+    <div class="kpi-value" id="kpi-rci-lo">—</div>
+    <div class="kpi-note">Undercooling waste &nbsp;|&nbsp; Target ≥ 96%</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">RTI</div>
+    <div class="kpi-value" id="kpi-rti">—</div>
+    <div class="kpi-note">Return Temp Index &nbsp;|&nbsp; Ideal = 1.0</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">η Cooling</div>
+    <div class="kpi-value" id="kpi-eta">—</div>
+    <div class="kpi-note">Q_IT / Q_CRAC &nbsp;|&nbsp; Target ≥ 0.85</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">ASHRAE A2</div>
+    <div class="kpi-value" id="kpi-ashrae">—</div>
+    <div class="kpi-note">Racks within 10–35°C</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">T_inlet P95</div>
+    <div class="kpi-value info" id="kpi-t-p95">—</div>
+    <div class="kpi-note">95th pct — all racks &nbsp;|&nbsp; &lt; 35°C</div>
+  </div>
+
+</div>
+
+<!-- ── MAIN CONTENT ───────────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- Report cards -->
+  <p class="section-title">CFD Analysis Reports</p>
+  <div class="cards-grid">
+
+    <!-- Thermal map -->
+    <a href="dc_thermal_report.html" class="report-card">
+      <div class="card-icon-bar thermal"></div>
+      <div class="card-body">
+        <div class="card-icon">🌡️</div>
+        <div class="card-title">Thermal Map</div>
+        <div class="card-desc">
+          Temperature distribution at rack heights (0.5 m, 1.0 m, 1.5 m).
+          Hot-spot detection with ASHRAE A2 contour (35°C).
+        </div>
+        <div class="card-metrics">
+          <div class="card-metric-row">
+            <span>Hot spot area (avg)</span>
+            <span id="metric-hotspot">—</span>
+          </div>
+          <div class="card-metric-row">
+            <span>T max (domain)</span>
+            <span id="metric-tmax">—</span>
+          </div>
+          <div class="card-metric-row">
+            <span>Colormap range</span>
+            <span>15 – 45°C</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">Open Thermal Map Report</div>
+    </a>
+
+    <!-- Rack performance -->
+    <a href="dc_rack_report.html" class="report-card">
+      <div class="card-icon-bar rack"></div>
+      <div class="card-body">
+        <div class="card-icon">🖥️</div>
+        <div class="card-title">Rack Performance</div>
+        <div class="card-desc">
+          Per-rack: T_inlet (mean, P95, P99, max), ΔT, outlet temperature.
+          Global indices: RCI_HI, RCI_LO, RTI, η_cooling.
+        </div>
+        <div class="card-metrics">
+          <div class="card-metric-row">
+            <span>T_inlet P99 (all racks)</span>
+            <span id="metric-t-p99">—</span>
+          </div>
+          <div class="card-metric-row">
+            <span>Q_IT total</span>
+            <span id="metric-qit">—</span>
+          </div>
+          <div class="card-metric-row">
+            <span>Q_CRAC</span>
+            <span id="metric-qcrac">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">Open Rack Report</div>
+    </a>
+
+    <!-- Airflow -->
+    <a href="dc_airflow_report.html" class="report-card">
+      <div class="card-icon-bar airflow"></div>
+      <div class="card-body">
+        <div class="card-icon">💨</div>
+        <div class="card-title">Airflow Distribution</div>
+        <div class="card-desc">
+          Velocity maps at rack heights. Stagnation zone detection
+          (U &lt; 0.05 m/s). Recirculation and bypass identification.
+        </div>
+        <div class="card-metrics">
+          <div class="card-metric-row">
+            <span>Stagnation area (avg)</span>
+            <span id="metric-stagnation">—</span>
+          </div>
+          <div class="card-metric-row">
+            <span>Velocity range</span>
+            <span>0 – 2.0 m/s</span>
+          </div>
+          <div class="card-metric-row">
+            <span>RTI interpretation</span>
+            <span id="metric-rti-interp">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">Open Airflow Report</div>
+    </a>
+
+  </div>
+
+  <!-- Standards reference -->
+  <p class="section-title">Standards & Thresholds</p>
+  <div class="standards-grid">
+
+    <div class="standard-card">
+      <h4>ASHRAE TC9.9 — Class A2 Supply Air</h4>
+      <div class="standard-row">
+        <span class="param">T supply min</span>
+        <span class="val">10°C</span>
+      </div>
+      <div class="standard-row">
+        <span class="param">T supply max</span>
+        <span class="val">35°C</span>
+      </div>
+      <div class="standard-row">
+        <span class="param">T return max</span>
+        <span class="val">45°C</span>
+      </div>
+      <div class="standard-row">
+        <span class="param">RCI target</span>
+        <span class="val">≥ 96%</span>
+      </div>
+    </div>
+
+    <div class="standard-card">
+      <h4>Cooling Efficiency Interpretation</h4>
+      <div class="standard-row">
+        <span class="param">η ≥ 0.95</span>
+        <span class="val ok">Excellent</span>
+      </div>
+      <div class="standard-row">
+        <span class="param">η 0.85–0.95</span>
+        <span class="val ok">Good — well-designed DC</span>
+      </div>
+      <div class="standard-row">
+        <span class="param">η 0.80–0.85</span>
+        <span class="val warn">Acceptable</span>
+      </div>
+      <div class="standard-row">
+        <span class="param">η &lt; 0.80</span>
+        <span class="val danger">Poor — bypass / mixing losses</span>
+      </div>
+    </div>
+
+    <div class="standard-card">
+      <h4>RTI — Return Temperature Index</h4>
+      <div class="standard-row">
+        <span class="param">RTI = 1.0</span>
+        <span class="val ok">Perfect — all cooling to IT</span>
+      </div>
+      <div class="standard-row">
+        <span class="param">RTI > 1.05</span>
+        <span class="val danger">Hot air recirculation</span>
+      </div>
+      <div class="standard-row">
+        <span class="param">RTI &lt; 0.95</span>
+        <span class="val warn">Bypass cooling</span>
+      </div>
+    </div>
+
+    <div class="standard-card">
+      <h4>T_inlet Percentile Interpretation</h4>
+      <div class="standard-row">
+        <span class="param">P95 &lt; 35°C</span>
+        <span class="val ok">Isolated hot rack — manageable</span>
+      </div>
+      <div class="standard-row">
+        <span class="param">P95 ≥ 35°C</span>
+        <span class="val danger">Generalised overheating problem</span>
+      </div>
+      <div class="standard-row">
+        <span class="param">P99 ≥ 35°C</span>
+        <span class="val danger">Structural hot spots</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────────────── -->
+<div class="footer">
+  <strong>FlowDesk CFD Platform</strong> — Data Center Cooling Analysis
+  &nbsp;|&nbsp;
+  Solver: OpenFOAM buoyantBoussinesqSimpleFoam
+  &nbsp;|&nbsp;
+  Standards: <a href="https://www.ashrae.org/technical-resources/bookstore/datacom-series" target="_blank">ASHRAE TC9.9</a>
+  &nbsp;|&nbsp; ANSI/TIA-942
+</div>
+
+<!-- ── KPI LOADER ─────────────────────────────────────────────────────────── -->
+<script>
+/**
+ * Load dc_metrics.json and populate the KPI cards with real values.
+ * Falls back gracefully if the file is not present.
+ */
+async function loadMetrics() {
+  try {
+    const resp = await fetch('dc_metrics.json');
+    if (!resp.ok) throw new Error('dc_metrics.json not found');
+    const data = await resp.json();
+
+    const rci   = data.rci   || {};
+    const rti   = data.rti   || {};
+    const eff   = data.cooling_efficiency || {};
+    const slices = data.slice_results || {};
+
+    // ── KPI bar values ───────────────────────────────────────────────
+    const rciHi = rci.RCI_HI ?? null;
+    const rciLo = rci.RCI_LO ?? null;
+    const rtiVal = rti.RTI    ?? null;
+    const etaVal = eff.eta_cooling ?? null;
+    const nOk   = rci.n_ashrae_ok ?? null;
+    const nTot  = rci.n_racks     ?? null;
+    const tP95  = rci.T_inlet_p95 ?? null;
+
+    setKpi('kpi-rci-hi', rciHi !== null ? `${rciHi.toFixed(1)}%` : '—',
+           rciHi !== null ? rciHi >= 96 ? 'ok' : rciHi >= 90 ? 'warn' : 'danger' : 'info');
+
+    setKpi('kpi-rci-lo', rciLo !== null ? `${rciLo.toFixed(1)}%` : '—',
+           rciLo !== null ? rciLo >= 96 ? 'ok' : rciLo >= 90 ? 'warn' : 'danger' : 'info');
+
+    setKpi('kpi-rti', rtiVal !== null ? rtiVal.toFixed(3) : '—',
+           rtiVal !== null ? Math.abs(rtiVal - 1) <= 0.05 ? 'ok'
+                           : Math.abs(rtiVal - 1) <= 0.15 ? 'warn' : 'danger' : 'info');
+
+    setKpi('kpi-eta', etaVal !== null ? etaVal.toFixed(2) : '—',
+           etaVal !== null ? etaVal >= 0.85 ? 'ok' : etaVal >= 0.80 ? 'warn' : 'danger' : 'info');
+
+    setKpi('kpi-ashrae',
+           nOk !== null && nTot !== null ? `${nOk}/${nTot}` : '—',
+           nOk !== null && nTot !== null ? nOk === nTot ? 'ok' : nOk / nTot >= 0.9 ? 'warn' : 'danger' : 'info');
+
+    setKpi('kpi-t-p95', tP95 !== null ? `${tP95.toFixed(1)}°C` : '—',
+           tP95 !== null ? tP95 <= 35 ? 'ok' : tP95 <= 40 ? 'warn' : 'danger' : 'info');
+
+    // ── Card metrics ─────────────────────────────────────────────────
+    // Thermal
+    const hotSpots = Object.values(slices)
+      .filter(s => s.hot_spot_pct !== undefined)
+      .map(s => s.hot_spot_pct);
+    const avgHotSpot = hotSpots.length > 0 ? hotSpots.reduce((a, b) => a + b) / hotSpots.length : null;
+    const maxTs = Object.values(slices)
+      .filter(s => s.T_max !== undefined)
+      .map(s => s.T_max);
+    const maxT = maxTs.length > 0 ? Math.max(...maxTs) : null;
+
+    setText('metric-hotspot', avgHotSpot !== null ? `${avgHotSpot.toFixed(1)}%` : '—');
+    setText('metric-tmax',    maxT       !== null ? `${maxT.toFixed(1)}°C`      : '—');
+
+    // Rack
+    setText('metric-t-p99', rci.T_inlet_p99 !== undefined ? `${rci.T_inlet_p99.toFixed(1)}°C` : '—');
+    setText('metric-qit',   eff.Q_IT_kW     !== undefined ? `${eff.Q_IT_kW.toFixed(1)} kW`    : '—');
+    setText('metric-qcrac', eff.Q_CRAC_kW   !== undefined ? `${eff.Q_CRAC_kW.toFixed(1)} kW`  : '—');
+
+    // Airflow
+    const stagValues = Object.values(slices)
+      .filter(s => s.stagnation_pct !== undefined)
+      .map(s => s.stagnation_pct);
+    const avgStag = stagValues.length > 0 ? stagValues.reduce((a, b) => a + b) / stagValues.length : null;
+    setText('metric-stagnation', avgStag !== null ? `${avgStag.toFixed(1)}%` : '—');
+    setText('metric-rti-interp', rti.interpretation || '—');
+
+  } catch (e) {
+    console.warn('Could not load dc_metrics.json:', e.message);
+  }
+}
+
+function setKpi(id, text, colorClass) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = `kpi-value ${colorClass}`;
+}
+function setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+loadMetrics();
+</script>
+
+</body>
+</html>

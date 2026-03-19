@@ -745,14 +745,38 @@ def validate_single_furniture(item: Dict, location: str, results: Dict) -> bool:
                                   "Each vertex must be a list of 3 numbers [x, y, z]")
                         is_valid = False
 
-            # temperature required in all faces
-            if 'temperature' not in face_data:
+            # temperature required only for wall/vent faces.
+            # inlet: T = zeroGradient (taken from interior flow — calculated by solver)
+            # outlet: T = codedFixedValue (T_inlet_avg + ΔT — calculated from thermalPower)
+            role = face_data.get('role', '')
+            if role in ('wall', 'vent') and 'temperature' not in face_data:
                 add_error(results, 'missing_field', f"{face_loc}.temperature",
                           "Missing required field 'temperature'")
                 is_valid = False
 
+            # inlet/outlet faces need airFlow for flowRateInletVelocity BC
+            if role in ('inlet', 'outlet'):
+                if 'airFlow' not in face_data:
+                    add_error(results, 'missing_field', f"{face_loc}.airFlow",
+                              "inlet/outlet face requires 'airFlow' [m³/h] for flowRateInletVelocity BC")
+                    is_valid = False
+                elif not isinstance(face_data['airFlow'], (int, float)) or face_data['airFlow'] <= 0:
+                    add_error(results, 'invalid_value', f"{face_loc}.airFlow",
+                              f"'airFlow' must be > 0 (got {face_data.get('airFlow')})")
+                    is_valid = False
+
+            # outlet faces need thermalPower_kW for ΔT = Q/(ṁ·Cp) calculation
+            if role == 'outlet':
+                if 'thermalPower_kW' not in face_data:
+                    add_error(results, 'missing_field', f"{face_loc}.thermalPower_kW",
+                              "outlet face requires 'thermalPower_kW' [kW] for codedFixedValue T BC")
+                    is_valid = False
+                elif not isinstance(face_data['thermalPower_kW'], (int, float)) or face_data['thermalPower_kW'] < 0:
+                    add_error(results, 'invalid_value', f"{face_loc}.thermalPower_kW",
+                              f"'thermalPower_kW' must be >= 0 (got {face_data.get('thermalPower_kW')})")
+                    is_valid = False
+
             # wall faces need emissivity + material
-            role = face_data.get('role', '')
             if role == 'wall':
                 if 'emissivity' not in face_data:
                     add_warning(results, 'missing_optional', f"{face_loc}.emissivity",

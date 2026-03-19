@@ -222,6 +222,50 @@ def apply_boundary_conditions_to_geometry(geometry_mesh: pv.PolyData, boundary_c
             geometry_mesh.cell_data['U'][patch_cells] = np.multiply(np.nan, np.column_stack([nx, ny, nz]))
             geometry_mesh.cell_data['T'][patch_cells] = [boundary_condition['T']] * len(patch_cells)
 
+        elif boundary_condition['type'] == 'rack_inlet':
+            # Rack cold-air intake: flowRateInletVelocity (negative = outflow from domain)
+            # T: zeroGradient — no fluid direction needed (flowRateInletVelocity uses patch normal)
+            logger.info(f"    * Setting rack_inlet boundary conditions for patch {patch_idx}")
+            surface_normals = geometry_mesh.cell_data['Normals'][patch_cells]
+            nx = -surface_normals[:, 0]
+            ny = -surface_normals[:, 1]
+            nz = -surface_normals[:, 2]
+
+            # Store mesh-computed inward normal for VTK visualization
+            boundary_conditions_df.loc[patch_idx, 'nx'] = np.mean(nx)
+            boundary_conditions_df.loc[patch_idx, 'ny'] = np.mean(ny)
+            boundary_conditions_df.loc[patch_idx, 'nz'] = np.mean(nz)
+            # fluid_nx/ny/nz not needed: flowRateInletVelocity uses patch normal internally
+            boundary_conditions_df.loc[patch_idx, 'fluid_nx'] = np.mean(nx)
+            boundary_conditions_df.loc[patch_idx, 'fluid_ny'] = np.mean(ny)
+            boundary_conditions_df.loc[patch_idx, 'fluid_nz'] = np.mean(nz)
+
+            geometry_mesh.cell_data['BC_type'][patch_cells] = 5  # rack_inlet
+            geometry_mesh.cell_data['U'][patch_cells] = np.multiply(np.nan, np.column_stack([nx, ny, nz]))
+            geometry_mesh.cell_data['T'][patch_cells] = [boundary_condition['T']] * len(patch_cells)
+
+        elif boundary_condition['type'] == 'rack_outlet':
+            # Rack hot-air exhaust: flowRateInletVelocity (positive = inflow into domain)
+            # T: codedFixedValue (set in hvac.py post-processing) — uses average T of inlet + ΔT
+            logger.info(f"    * Setting rack_outlet boundary conditions for patch {patch_idx}")
+            surface_normals = geometry_mesh.cell_data['Normals'][patch_cells]
+            nx = -surface_normals[:, 0]
+            ny = -surface_normals[:, 1]
+            nz = -surface_normals[:, 2]
+
+            # Store mesh-computed inward normal for VTK visualization
+            boundary_conditions_df.loc[patch_idx, 'nx'] = np.mean(nx)
+            boundary_conditions_df.loc[patch_idx, 'ny'] = np.mean(ny)
+            boundary_conditions_df.loc[patch_idx, 'nz'] = np.mean(nz)
+            # fluid_nx/ny/nz not needed: flowRateInletVelocity uses patch normal internally
+            boundary_conditions_df.loc[patch_idx, 'fluid_nx'] = np.mean(nx)
+            boundary_conditions_df.loc[patch_idx, 'fluid_ny'] = np.mean(ny)
+            boundary_conditions_df.loc[patch_idx, 'fluid_nz'] = np.mean(nz)
+
+            geometry_mesh.cell_data['BC_type'][patch_cells] = 6  # rack_outlet
+            geometry_mesh.cell_data['U'][patch_cells] = np.multiply(np.nan, np.column_stack([nx, ny, nz]))
+            geometry_mesh.cell_data['T'][patch_cells] = [boundary_condition['T']] * len(patch_cells)
+
         else:
             logger.error(f"    * Unknown boundary condition type: {boundary_condition['type']}")
             raise BaseException(f'Unknown boundary condition type: {boundary_condition["type"]}')

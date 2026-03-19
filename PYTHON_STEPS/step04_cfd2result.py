@@ -1,21 +1,11 @@
 import os
 import logging
-import sys
-from pathlib import Path
 
 from src.components.solve.local import solve_local
 from src.components.solve.inductiva import solve_inductiva
 from src.components.tools.performance import PerformanceMonitor
 
 logger = logging.getLogger(__name__)
-
-# Importar EXECUTION_MODE desde mainPipeline
-python_steps = str(Path(__file__).parent.parent / "PYTHON_STEPS")
-sys.path.insert(0, python_steps)
-try:
-    from mainPipeline import EXECUTION_MODE
-except ImportError:
-    EXECUTION_MODE = "full"  # Default si no se puede importar
 
 
 def run(case_name: str = "cases/cfd_case", type: str = "local") -> None:
@@ -39,17 +29,6 @@ def run(case_name: str = "cases/cfd_case", type: str = "local") -> None:
     performance_monitor.start()
     
     logger.info("\n=========== RUNNING CFD SIMULATION ===========")
-    logger.info(f"Execution mode: {EXECUTION_MODE}")
-    
-    # ========== MESH-ONLY MODE: Skip simulation ==========
-    if EXECUTION_MODE == "mesh-only":
-        logger.info("\n⚠️  MESH-ONLY MODE: Skipping CFD simulation")
-        logger.info("Mesh generation will be executed, but simulation will NOT run")
-        logger.info("To visualize the mesh in ParaView:")
-        logger.info(f"  1. Open: cases/{case_name}/sim/results.foam")
-        logger.info(f"  2. Or open: cases/{case_name}/sim/constant/polyMesh/")
-        logger.info("✅ Mesh-only mode completed\n")
-        return
 
     # Step 1: Set up simulation environment
     case_path = os.path.join(os.getcwd(), "cases", case_name)
@@ -59,8 +38,6 @@ def run(case_name: str = "cases/cfd_case", type: str = "local") -> None:
 
     # Step 2: Execute CFD simulation
     logger.info(f"2 - Executing CFD simulation on {type} platform")
-    if EXECUTION_MODE == "test":
-        logger.info("   (TEST MODE: 2 iterations only)")
     logger.info(f"   Platform: {type}")
     performance_monitor.update_memory()
     

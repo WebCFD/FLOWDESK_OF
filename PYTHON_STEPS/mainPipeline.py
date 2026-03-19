@@ -188,9 +188,14 @@ def main():
     
     case_name = json_payload.get("case_name", "DefaultCase")
     
-    # Read simulation type from JSON (TransientSim or SteadySim)
-    simulation_type_str = json_payload.get("simulationType", "SteadySim")  # Default: steady
-    transient_mode = (simulation_type_str == "TransientSim")
+    # Read simulation type from JSON
+    # Possible values: "IndoorSpaces", "DataCenters", "FireAndSmoke", "IndustrialCooling"
+    # Legacy values "SteadySim" / "TransientSim" are treated as IndoorSpaces (backward compat)
+    simulation_type_str = json_payload.get("simulationType", "IndoorSpaces")
+
+    # Determine transient mode: explicit flag OR legacy "TransientSim" value
+    transient_flag = json_payload.get("transient", False)
+    transient_mode = transient_flag or (simulation_type_str == "TransientSim")
     
     log_print(f"📋 Case name: {case_name}")
     log_print(f"🔧 Simulation type: {simulation_type_str} ({'TRANSIENT' if transient_mode else 'STEADY'})")
@@ -652,14 +657,11 @@ def main():
             # Import step05
             from step05_results2post import run as step05_run
             
-            log_print("🔄 Ejecutando análisis de confort térmico en 3 planos...")
-            log_print("   - Plano 1: 0.6m (persona sentada)")
-            log_print("   - Plano 2: 1.1m (persona de pie)")
-            log_print("   - Plano 3: 1.7m (nivel cabeza)")
+            log_print(f"🔄 Ejecutando post-procesamiento [{simulation_type_str}]...")
             log_print("")
             
-            # Execute step05
-            step05_run(case_name=case_name)
+            # Execute step05 — dispatch by simulation type
+            step05_run(case_name=case_name, simulation_type=simulation_type_str)
             
             # Verificar outputs generados
             post_path = os.path.join(case_path, "post")

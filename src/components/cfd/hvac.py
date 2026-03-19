@@ -676,6 +676,55 @@ def define_initial_files(sim_path, patch_df):
                         logger.info(f"    BC {row['id']} (mass_flow_inlet): Q={Q_m3s*3600:.1f} m³/h, A={area_m2:.4f} m², U_mag={U_mag:.2f} m/s")
                     else:
                         raise BaseException('Unknown variable')
+                elif(row['type'] == 'rack_inlet'):
+                    # Rack cold-air intake: air leaves the room domain.
+                    # U: flowRateInletVelocity with NEGATIVE volumetricFlowRate (= outflow from domain)
+                    # T: zeroGradient placeholder (will be replaced by post-processing)
+                    if(variable == 'p'):
+                        new_bc_data["type"] = 'calculated'
+                        new_bc_data["value"] = INTERNALFIELD_DICT['p']
+                    elif(variable == 'p_rgh'):
+                        new_bc_data["type"] = 'fixedFluxPressure'
+                        new_bc_data["value"] = 0
+                    elif(variable == 'T'):
+                        # Placeholder — post-processing replaces this with zeroGradient
+                        new_bc_data["type"] = 'fixedValue'
+                        new_bc_data["value"] = INTERNALFIELD_DICT['T']
+                    elif(variable == 'U'):
+                        Q_m3s = row['massFlow_(m³/h)'] / 3600.0  # m³/s
+                        # Negative = outflow from domain (rack sucks cold air in)
+                        new_bc_data["type"] = 'flowRateInletVelocity'
+                        new_bc_data["volumetricFlowRate"] = -Q_m3s
+                        new_bc_data["value"] = np.array([0.0, 0.0, 0.0])
+                        logger.info(f"    BC {row['id']} (rack_inlet): Q={Q_m3s*3600:.1f} m³/h → volumetricFlowRate={-Q_m3s:.4f} m³/s (outflow)")
+                    else:
+                        raise BaseException('Unknown variable')
+                elif(row['type'] == 'rack_outlet'):
+                    # Rack hot-air exhaust: hot air enters the room domain.
+                    # U: flowRateInletVelocity with POSITIVE volumetricFlowRate (= inflow into domain)
+                    # T: codedFixedValue placeholder (will be replaced by post-processing)
+                    #    T_outlet = average(T_inlet_patch) + ΔT
+                    #    ΔT = thermalPower_(W) / (massFlow_(m³/h)/3600 * RHO_REF * CP)
+                    if(variable == 'p'):
+                        new_bc_data["type"] = 'calculated'
+                        new_bc_data["value"] = INTERNALFIELD_DICT['p']
+                    elif(variable == 'p_rgh'):
+                        new_bc_data["type"] = 'fixedFluxPressure'
+                        new_bc_data["value"] = 0
+                    elif(variable == 'T'):
+                        # Placeholder — post-processing replaces this with codedFixedValue
+                        T_outlet_approx = row['T_(°C)'] + 273.15
+                        new_bc_data["type"] = 'fixedValue'
+                        new_bc_data["value"] = T_outlet_approx
+                    elif(variable == 'U'):
+                        Q_m3s = row['massFlow_(m³/h)'] / 3600.0  # m³/s
+                        # Positive = inflow into domain (rack blows hot air out)
+                        new_bc_data["type"] = 'flowRateInletVelocity'
+                        new_bc_data["volumetricFlowRate"] = Q_m3s
+                        new_bc_data["value"] = np.array([0.0, 0.0, 0.0])
+                        logger.info(f"    BC {row['id']} (rack_outlet): Q={Q_m3s*3600:.1f} m³/h → volumetricFlowRate={Q_m3s:.4f} m³/s (inflow)")
+                    else:
+                        raise BaseException('Unknown variable')
                 else:
                     raise BaseException('Boundary Condition Type Unknown')
 
@@ -693,6 +742,69 @@ def define_initial_files(sim_path, patch_df):
     with open(u_file, 'w', encoding='utf-8') as _f:
         _f.write(_content)
     logger.info("    * Fixed inletDirection keyword in 0.orig/U (added 'uniform')")
+
+    # ── Post-process 0.orig/T: replace rack placeholder BCs ──────────────────
+    # rack_inlet T: fixedValue placeholder → zeroGradient (takes T from interior)
+    # rack_outlet T: fixedValue placeholder → codedFixedValue (T_inlet_avg + ΔT)
+    rack_inlets  = patch_df[patch_df['type'] == 'rack_inlet']
+    rack_outlets = patch_df[patch_df['type'] == 'rack_outlet']
+    if len(rack_inlets) > 0 or len(rack_outlets) > 0:
+        t_file = os.path.join(initial_path, 'T')
+        with open(t_file, 'r', encoding='utf-8') as _f:
+            _t_content = _f.read()
+
+        # --- rack_inlet: replace with zeroGradient ---
+        for _, row in rack_inlets.iterrows():
+            pid = row['id']
+            # Matches the entire patch block (no nested braces in fixedValue)
+            _pat = r'([ \t]*)' + _re.escape(pid) + r'[ \t]*\n[ \t]*\{[^}]*?\}'
+            _new = (
+                f'    {pid}\n'
+                f'    {{\n'
+                f'        type            zeroGradient;\n'
+                f'    }}'
+            )
+            _t_content = _re.sub(_pat, _new, _t_content, flags=_re.DOTALL)
+            logger.info(f"    * rack_inlet T: '{pid}' → zeroGradient")
+
+        # --- rack_outlet: replace with codedFixedValue ---
+        for _, row in rack_outlets.iterrows():
+            pid        = row['id']
+            inlet_pid  = row['inlet_id']
+            T_out_K    = row['T_(°C)'] + 273.15   # approximate initial value [K]
+            Q_m3s      = row['massFlow_(m³/h)'] / 3600.0
+            Q_W        = float(row['thermalPower'])  # already in W (converted in create_volumes.py)
+            m_dot      = Q_m3s * RHO_REF            # kg/s
+            delta_T    = Q_W / (m_dot * CP)          # K  ← constant design parameter
+
+            coded_name = f"rackOutlet_{pid}"
+            _new = (
+                f'    {pid}\n'
+                f'    {{\n'
+                f'        type            codedFixedValue;\n'
+                f'        value           uniform {T_out_K:.4f};\n'
+                f'        name            {coded_name};\n'
+                f'        code\n'
+                f'        #{{\n'
+                f'            const fvMesh& mesh = this->patch().boundaryMesh().mesh();\n'
+                f'            label inletID = mesh.boundaryMesh().findPatchID("{inlet_pid}");\n'
+                f'            const scalarField& Tin =\n'
+                f'                mesh.boundary()[inletID].lookupPatchField<volScalarField, scalar>("T");\n'
+                f'            scalar Tmean = gAverage(Tin);\n'
+                f'            operator==(Tmean + {delta_T:.4f});  // deltaT = Q_W/(mdot*Cp)\n'
+                f'        #}};\n'
+                f'    }}'
+            )
+            _pat = r'([ \t]*)' + _re.escape(pid) + r'[ \t]*\n[ \t]*\{[^}]*?\}'
+            _t_content = _re.sub(_pat, _new, _t_content, flags=_re.DOTALL)
+            logger.info(
+                f"    * rack_outlet T: '{pid}' → codedFixedValue "
+                f"(ΔT={delta_T:.2f} K, Q={Q_W:.0f} W, inlet='{inlet_pid}')"
+            )
+
+        with open(t_file, 'w', encoding='utf-8') as _f:
+            _f.write(_t_content)
+        logger.info("    * Rack T boundary conditions post-processed successfully")
 
 
 def setup(case_path: str, simulation_type: str = 'comfortTest', transient: bool = False) -> list:

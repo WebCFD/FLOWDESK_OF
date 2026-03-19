@@ -362,25 +362,35 @@ def create_face_based_mesh(patch_df: pd.DataFrame, data: Dict[str, Any]) -> Tupl
             )
 
         elif role == 'inlet':
-            # Rack cold-air intake → air LEAVES the room domain through this face
-            # Use pressure_outlet so OF allows outflow naturally driven by back source
+            # Rack cold-air intake: air LEAVES the room domain through this face.
+            # flowRateInletVelocity with negative volumetricFlowRate = outflow from domain.
+            # T: zeroGradient — takes temperature from the interior flow.
             new_patch = {
-                'id':   face_pid,
-                'type': 'pressure_outlet',
-                'T':    temperature,
-                'pressure': 0,
-                'open': True,
+                'id':       face_pid,
+                'type':     'rack_inlet',
+                'T':        temperature,
+                'massFlow': fd.get('airFlow', 0),   # m³/h — used for U BC
+                'open':     True,
             }
 
         elif role == 'outlet':
-            # Rack hot-air exhaust → hot air ENTERS the room domain from the rack
-            # mass_flow_inlet enforces the specified volumetric flow rate and temperature
+            # Rack hot-air exhaust: hot air ENTERS the room domain from the rack.
+            # flowRateInletVelocity with positive volumetricFlowRate = inflow into domain.
+            # T: codedFixedValue that reads average T of corresponding inlet patch and adds ΔT.
+            # Find the inlet face name in this rack (first face with role='inlet')
+            inlet_face_name = next(
+                (name for name, fdata in faces_data.items() if fdata.get('role') == 'inlet'),
+                'front'  # fallback if no explicit inlet face
+            )
+            inlet_patch_id = f"{obj_id}_{inlet_face_name}"
             new_patch = {
-                'id':       face_pid,
-                'type':     'mass_flow_inlet',
-                'T':        temperature,
-                'massFlow': fd.get('airFlow', 0),   # m³/h
-                'open':     True,
+                'id':           face_pid,
+                'type':         'rack_outlet',
+                'T':            temperature,
+                'massFlow':     fd.get('airFlow', 0),                  # m³/h
+                'thermalPower': fd.get('thermalPower_kW', 0) * 1000.0, # W
+                'inlet_id':     inlet_patch_id,                        # ref to corresponding inlet
+                'open':         True,
             }
 
         elif role == 'vent':
